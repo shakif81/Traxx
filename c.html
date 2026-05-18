@@ -2473,69 +2473,8 @@ function mostrarFormNuevoMaterial() {
 }
 
 // Guardar material
-async function guardarMaterialEntrega() {
-    const estacionId = document.getElementById('materialEstacionId').value;
-    const index = document.getElementById('materialIndex').value;
-    const nombre = document.getElementById('materialNombre').value.trim();
-    const cantidadNecesaria = parseInt(document.getElementById('materialCantidadNecesaria').value) || 0;
-    const cantidadEntregada = parseInt(document.getElementById('materialCantidadEntregada').value) || 0;
-    
-    if (!estacionId) {
-        alert('Error: No hay estación seleccionada');
-        return;
-    }
-    
-    if (!nombre) {
-        alert('El nombre del material es obligatorio');
-        return;
-    }
-    
-    const estado = cantidadEntregada >= cantidadNecesaria ? 'completo' : 'incompleto';
-    
-    // Obtener datos de escaneo del formulario
-    const requiereEscaneoSelect = document.getElementById('materialRequiereEscaneo');
-    const requiereEscaneo = requiereEscaneoSelect ? requiereEscaneoSelect.value === 'true' : false;
-    const cantidadEscaneosRequeridos = requiereEscaneo ? 
-        parseInt(document.getElementById('materialCantidadEscaneos')?.value) || 0 : 0;
-    
-    // Obtener datos actuales
-    const data = await cargarDatosFirebase('materiales_entregados');
-    const estacionData = data[estacionId] || { materiales: [] };
-    let materiales = estacionData.materiales || [];
-    
-    let serialesExistentes = [];
-    let escaneoCompletadoExistente = false;
-    let verificadoExistente = false;
-    let verificadoFechaExistente = null;
-    
-    if (index !== '') {
-        const idx = parseInt(index);
-        if (materiales[idx]) {
-            serialesExistentes = materiales[idx].serialNumbers || [];
-  let  fechasExistentes = materiales[idx].fechasEscaneo || [];escaneoCompletadoExistente = materiales[idx].escaneoCompletado || false;
-            verificadoExistente = materiales[idx].verificado || false;
-            verificadoFechaExistente = materiales[idx].verificadoFecha || null;
-        }
-    }
-    
-    const nuevoMaterial = {
-        nombre: nombre,
-        cantidadNecesaria: cantidadNecesaria,
-        cantidadEntregada: cantidadEntregada,
-        estado: estado,
-        fechasEscaneo: fechasExistentes,
-        verificado: verificadoExistente,
-        verificadoFecha: verificadoFechaExistente,
-        requiereEscaneo: requiereEscaneo,
-        cantidadEscaneosRequeridos: cantidadEscaneosRequeridos,
-        serialNumbers: serialesExistentes,
-        escaneoCompletado: escaneoCompletadoExistente || (serialesExistentes.length >= cantidadEscaneosRequeridos),
-        actualizado: new Date().toISOString(),
-        createdAt: index === '' ? new Date().toISOString() : (materiales[parseInt(index)]?.createdAt || new Date().toISOString())
-    };
-    
-    if (index === '') {
-        materiales.push(nuevoMaterial);
+        
+
 async function guardarMaterialEntrega() {
     const estacionId = document.getElementById('materialEstacionId').value;
     const index = document.getElementById('materialIndex').value;
@@ -2639,6 +2578,8 @@ async function guardarMaterialEntrega() {
     await renderizarEstacionesArmario();
     console.log(`✅ Material guardado en ${estacionId}`);
 }
+    
+
 // Eliminar material
 async function eliminarMaterialEntrega() {
     if (currentMaterialId === null) {
