@@ -986,19 +986,30 @@ function initConnectionListeners() {
 // ==============================================
 // ESCANEO CON CÁMARA REAL - VERSIÓN COMPLETA Y FUNCIONAL
 // ==============================================
-window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
-    console.log('🔍 Escáner iniciado para', estacionId, materialIndex);
 
-    // 1. Obtener el material actualizado desde Firebase
+function limpiarCodigoEscaneado(codigo) {
+    if (!codigo) return '';
+    let limpio = codigo.trim();
+    // Eliminar prefijos comunes
+    limpio = limpio.replace(/^BDM[\s\-]*/i, '');
+    limpio = limpio.replace(/^[A-Z]{2,3}[\s\-]*/i, '');
+    // Si solo quieres números, descomenta la siguiente línea:
+    // limpio = limpio.replace(/[^0-9]/g, '');
+    // Si quieres conservar letras y números (recomendado para QR genéricos):
+    limpio = limpio.replace(/[^a-zA-Z0-9]/g, '');
+    return limpio;
+}
+
+    
+    
+window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
+    console.log('Escáner iniciado', estacionId, materialIndex);
+
+    // Obtener el material actual
     const data = await cargarDatosFirebase('materiales_entregados');
     const materiales = data[estacionId]?.materiales || [];
     const material = materiales[materialIndex];
-
-    if (!material) {
-        alert('Material no encontrado');
-        return;
-    }
-    if (!material.requiereEscaneo) {
+    if (!material?.requiereEscaneo) {
         alert('Este material no requiere escaneo');
         return;
     }
@@ -1006,23 +1017,40 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
     let codigosEscaneados = material.serialNumbers || [];
     let cantidadRequerida = material.cantidadEscaneosRequeridos || 0;
     let pendientes = cantidadRequerida - codigosEscaneados.length;
-
     if (pendientes <= 0) {
-        alert('✅ Todos los escaneos ya fueron completados');
+        alert('✅ Ya completado');
         return;
     }
 
-    // 2. Crear el elemento para el lector QR
+    // Crear el contenedor del escáner con tamaño fijo
+    const scannerContainer = document.createElement('div');
+    scannerContainer.id = 'qr-scanner-container';
+    scannerContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    // El lector necesita un elemento con ID único
+    const readerId = 'html5qr-' + Date.now();
     const readerDiv = document.createElement('div');
-    const readerId = 'qr_reader_' + Date.now();
     readerDiv.id = readerId;
-    readerDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:200000;';
-    document.body.appendChild(readerDiv);
+    readerDiv.style.cssText = 'width: 100%; height: 100%;';
+    scannerContainer.appendChild(readerDiv);
+    document.body.appendChild(scannerContainer);
 
     const html5QrCode = new Html5Qrcode(readerId);
 
-    // 3. Función para procesar cada código escaneado
-    const procesarEscaneo = async (decodedText) => {
+    // Función para procesar el código escaneado
+    const onScanSuccess = async (decodedText) => {
         const codigoLimpio = limpiarCodigoEscaneado(decodedText);
         if (!codigoLimpio) {
             alert('❌ Código no válido');
@@ -1033,66 +1061,72 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
             return;
         }
 
-        // Agregar el nuevo código
         codigosEscaneados.push(codigoLimpio);
         if (!material.fechasEscaneo) material.fechasEscaneo = [];
         material.fechasEscaneo.push(new Date().toISOString());
-
         material.serialNumbers = codigosEscaneados;
         material.escaneoCompletado = codigosEscaneados.length >= cantidadRequerida;
-
         if (material.escaneoCompletado && material.cantidadEntregada >= material.cantidadNecesaria) {
             material.verificado = true;
             material.verificadoFecha = new Date().toLocaleString();
         }
 
         // Guardar en Firebase
-        const dataActual = await cargarDatosFirebase('materiales_entregados');
-        const estacionDataActual = dataActual[estacionId] || { materiales: [] };
-        let materialesActual = estacionDataActual.materiales || [];
-        materialesActual[materialIndex] = material;
+        const dataAct = await cargarDatosFirebase('materiales_entregados');
+        const estacionDataAct = dataAct[estacionId] || { materiales: [] };
+        let mats = estacionDataAct.materiales || [];
+        mats[materialIndex] = material;
         await guardarFirebase('materiales_entregados', estacionId, {
-            materiales: materialesActual,
+            materiales: mats,
             ultimaActualizacion: new Date().toISOString()
         });
 
         const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
-
         if (nuevosPendientes === 0) {
-            alert(`✅ ¡COMPLETADO! Se escanearon ${codigosEscaneados.length} códigos.`);
+            alert(`✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`);
             await html5QrCode.stop();
-            readerDiv.remove();
+            scannerContainer.remove();
             cargarMaterialesEstacionSeleccionada();
             renderizarEstacionesArmario();
         } else {
             alert(`✅ Registrado: ${codigoLimpio}\nProgreso: ${codigosEscaneados.length}/${cantidadRequerida}`);
-            // El escáner sigue activo
         }
     };
 
-    // 4. Iniciar la cámara
+    // Iniciar el escáner
     try {
         await html5QrCode.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            procesarEscaneo,
+            { facingMode: 'environment' },  // cámara trasera
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            onScanSuccess,
             (error) => console.log('Error de escaneo (ignorable):', error)
         );
-
-        // Botón para cerrar manualmente
+        // Botón para cerrar
         const closeBtn = document.createElement('button');
         closeBtn.textContent = '❌ Cerrar escáner';
-        closeBtn.style.cssText = 'position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#f44336; color:white; border:none; border-radius:30px; padding:10px 20px; font-size:16px; z-index:200001; cursor:pointer;';
+        closeBtn.style.cssText = 'position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#f44336; color:white; border:none; border-radius:30px; padding:10px 20px; font-size:16px; z-index:100001; cursor:pointer;';
         closeBtn.onclick = () => {
             html5QrCode.stop();
-            readerDiv.remove();
+            scannerContainer.remove();
         };
-        readerDiv.appendChild(closeBtn);
+        scannerContainer.appendChild(closeBtn);
     } catch (err) {
-        alert('Error al iniciar la cámara: ' + err.message);
-        readerDiv.remove();
+        console.error(err);
+        alert('No se pudo iniciar la cámara: ' + err.message);
+        scannerContainer.remove();
     }
-};
+};        
+
+
+
+
+
+
+    
 // ==============================================
 // INDICADOR VISUAL DE CONEXIÓN
 // ==============================================
