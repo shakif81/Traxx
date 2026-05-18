@@ -2536,33 +2536,92 @@ async function guardarMaterialEntrega() {
     
     if (index === '') {
         materiales.push(nuevoMaterial);
+async function guardarMaterialEntrega() {
+    const estacionId = document.getElementById('materialEstacionId').value;
+    const index = document.getElementById('materialIndex').value;
+    const nombre = document.getElementById('materialNombre').value.trim();
+    const cantidadNecesaria = parseInt(document.getElementById('materialCantidadNecesaria').value) || 0;
+    const cantidadEntregada = parseInt(document.getElementById('materialCantidadEntregada').value) || 0;
+
+    if (!estacionId) {
+        alert('Error: No hay estación seleccionada');
+        return;
+    }
+    if (!nombre) {
+        alert('El nombre del material es obligatorio');
+        return;
+    }
+
+    const estado = cantidadEntregada >= cantidadNecesaria ? 'completo' : 'incompleto';
+
+    // Obtener datos de escaneo
+    const requiereEscaneoSelect = document.getElementById('materialRequiereEscaneo');
+    const requiereEscaneo = requiereEscaneoSelect ? requiereEscaneoSelect.value === 'true' : false;
+    const cantidadEscaneosRequeridos = requiereEscaneo ? 
+        parseInt(document.getElementById('materialCantidadEscaneos')?.value) || 0 : 0;
+
+    // Obtener datos existentes si es edición
+    const data = await cargarDatosFirebase('materiales_entregados');
+    const estacionData = data[estacionId] || { materiales: [] };
+    let materiales = estacionData.materiales || [];
+    
+    let serialesExistentes = [];
+    let fechasExistentes = [];
+    let escaneoCompletadoExistente = false;
+    let verificadoExistente = false;
+    let verificadoFechaExistente = null;
+
+    if (index !== '') {
+        const idx = parseInt(index);
+        if (materiales[idx]) {
+            serialesExistentes = materiales[idx].serialNumbers || [];
+            fechasExistentes = materiales[idx].fechasEscaneo || [];
+            escaneoCompletadoExistente = materiales[idx].escaneoCompletado || false;
+            verificadoExistente = materiales[idx].verificado || false;
+            verificadoFechaExistente = materiales[idx].verificadoFecha || null;
+        }
+    }
+
+    const nuevoMaterial = {
+        nombre: nombre,
+        cantidadNecesaria: cantidadNecesaria,
+        cantidadEntregada: cantidadEntregada,
+        estado: estado,
+        verificado: verificadoExistente,
+        verificadoFecha: verificadoFechaExistente,
+        requiereEscaneo: requiereEscaneo,
+        cantidadEscaneosRequeridos: cantidadEscaneosRequeridos,
+        serialNumbers: serialesExistentes,
+        fechasEscaneo: fechasExistentes,
+        escaneoCompletado: escaneoCompletadoExistente || (serialesExistentes.length >= cantidadEscaneosRequeridos),
+        actualizado: new Date().toISOString(),
+        createdAt: index === '' ? new Date().toISOString() : (materiales[parseInt(index)]?.createdAt || new Date().toISOString())
+    };
+
+    if (index === '') {
+        materiales.push(nuevoMaterial);
     } else {
         materiales[parseInt(index)] = nuevoMaterial;
     }
-    
+
     const nuevosDatos = {
         materiales: materiales,
         ultimaActualizacion: new Date().toISOString()
     };
-    
+
     await guardarFirebase('materiales_entregados', estacionId, nuevosDatos);
-    
+
+    // Indicador de guardado
     const indicator = document.getElementById('saveIndicator');
     if (indicator) {
         indicator.classList.remove('hidden');
         setTimeout(() => indicator.classList.add('hidden'), 1500);
     }
-    
-    // Recargar la lista en admin
+
+    // Recargar lista en admin
     await cargarMaterialesEstacion();
-    
-    // Mantener el selector en la misma estación
-    const selector = document.getElementById('selectorEstacionMateriales');
-    if (selector) {
-        selector.value = estacionId;
-    }
-    
-    // Cerrar formulario SOLO si era nuevo
+
+    // Cerrar formulario si era nuevo
     const form = document.getElementById('formMaterialEntrega');
     if (form && index === '') {
         form.style.display = 'none';
@@ -2575,15 +2634,11 @@ async function guardarMaterialEntrega() {
         const cantidadEscaneos = document.getElementById('materialCantidadEscaneos');
         if (cantidadEscaneos) cantidadEscaneos.value = '1';
     }
-    
-    // Limpiar selección actual
+
     currentMaterialId = null;
-    
     await renderizarEstacionesArmario();
-    
     console.log(`✅ Material guardado en ${estacionId}`);
 }
-
 // Eliminar material
 async function eliminarMaterialEntrega() {
     if (currentMaterialId === null) {
