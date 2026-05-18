@@ -982,39 +982,46 @@ function initConnectionListeners() {
 
 
 // ==============================================
-// ESCANEO CON CÁMARA - FUNCIÓN GLOBAL DEFINITIVA
-// ==============================================
 
+// ==============================================
+// ESCANEO CON CÁMARA REAL - VERSIÓN COMPLETA Y FUNCIONAL
+// ==============================================
 window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
-    console.log('🔍 Escáner llamado', estacionId, materialIndex);
-    
-    // Obtener material actualizado
+    console.log('🔍 Escáner iniciado para', estacionId, materialIndex);
+
+    // 1. Obtener el material actualizado desde Firebase
     const data = await cargarDatosFirebase('materiales_entregados');
     const materiales = data[estacionId]?.materiales || [];
     const material = materiales[materialIndex];
-    
-    if (!material?.requiereEscaneo) {
+
+    if (!material) {
+        alert('Material no encontrado');
+        return;
+    }
+    if (!material.requiereEscaneo) {
         alert('Este material no requiere escaneo');
         return;
     }
-    
+
     let codigosEscaneados = material.serialNumbers || [];
     let cantidadRequerida = material.cantidadEscaneosRequeridos || 0;
     let pendientes = cantidadRequerida - codigosEscaneados.length;
-    
+
     if (pendientes <= 0) {
         alert('✅ Todos los escaneos ya fueron completados');
         return;
     }
-    
-    // Crear contenedor del escáner (mismo código que funcionó en el paso 2)
+
+    // 2. Crear el elemento para el lector QR
     const readerDiv = document.createElement('div');
-    readerDiv.id = 'qrReader_' + Date.now();
+    const readerId = 'qr_reader_' + Date.now();
+    readerDiv.id = readerId;
     readerDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:200000;';
     document.body.appendChild(readerDiv);
-    
-    const html5QrCode = new Html5Qrcode(readerDiv.id);
-    
+
+    const html5QrCode = new Html5Qrcode(readerId);
+
+    // 3. Función para procesar cada código escaneado
     const procesarEscaneo = async (decodedText) => {
         const codigoLimpio = limpiarCodigoEscaneado(decodedText);
         if (!codigoLimpio) {
@@ -1025,51 +1032,53 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
             alert(`⚠️ Código ya escaneado: ${codigoLimpio}`);
             return;
         }
-        
+
+        // Agregar el nuevo código
         codigosEscaneados.push(codigoLimpio);
         if (!material.fechasEscaneo) material.fechasEscaneo = [];
         material.fechasEscaneo.push(new Date().toISOString());
-        
+
         material.serialNumbers = codigosEscaneados;
         material.escaneoCompletado = codigosEscaneados.length >= cantidadRequerida;
-        
+
         if (material.escaneoCompletado && material.cantidadEntregada >= material.cantidadNecesaria) {
             material.verificado = true;
             material.verificadoFecha = new Date().toLocaleString();
         }
-        
+
         // Guardar en Firebase
         const dataActual = await cargarDatosFirebase('materiales_entregados');
         const estacionDataActual = dataActual[estacionId] || { materiales: [] };
-        let matActual = estacionDataActual.materiales || [];
-        matActual[materialIndex] = material;
+        let materialesActual = estacionDataActual.materiales || [];
+        materialesActual[materialIndex] = material;
         await guardarFirebase('materiales_entregados', estacionId, {
-            materiales: matActual,
+            materiales: materialesActual,
             ultimaActualizacion: new Date().toISOString()
         });
-        
+
         const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
-        
+
         if (nuevosPendientes === 0) {
-            alert(`✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`);
+            alert(`✅ ¡COMPLETADO! Se escanearon ${codigosEscaneados.length} códigos.`);
             await html5QrCode.stop();
             readerDiv.remove();
             cargarMaterialesEstacionSeleccionada();
             renderizarEstacionesArmario();
         } else {
-            alert(`✅ Registrado: ${codigoLimpio}\n📊 Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`);
-            // El escáner sigue activo, no lo detenemos
+            alert(`✅ Registrado: ${codigoLimpio}\nProgreso: ${codigosEscaneados.length}/${cantidadRequerida}`);
+            // El escáner sigue activo
         }
     };
-    
+
+    // 4. Iniciar la cámara
     try {
         await html5QrCode.start(
             { facingMode: 'environment' },
-            { fps: 10, qrbox: 250 },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
             procesarEscaneo,
-            (error) => console.log('Error de escaneo:', error)
+            (error) => console.log('Error de escaneo (ignorable):', error)
         );
-        
+
         // Botón para cerrar manualmente
         const closeBtn = document.createElement('button');
         closeBtn.textContent = '❌ Cerrar escáner';
@@ -1080,15 +1089,10 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         };
         readerDiv.appendChild(closeBtn);
     } catch (err) {
-        alert('Error al iniciar cámara: ' + err.message);
+        alert('Error al iniciar la cámara: ' + err.message);
         readerDiv.remove();
     }
 };
-
-// Verificar que la función está disponible
-console.log('✅ función abrirEscaneoMaterial definida:', typeof window.abrirEscaneoMaterial);
-
-
 // ==============================================
 // INDICADOR VISUAL DE CONEXIÓN
 // ==============================================
