@@ -1,0 +1,3527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Linea TRAXX - Sistema de Gestión de Montajes</title>
+
+<style>
+/* ============================================ */
+/* 1. RESET Y VARIABLES GLOBALES */
+/* ============================================ */
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','Segoe UI',Roboto,sans-serif}
+:root{--primary:#0077be;--primary-light:#33a1de;--primary-dark:#005a94;--secondary:#e87722;--accent:#ffcd00;--success:#43a047;--danger:#e53935;--bg-main:#f5f9ff;--bg-card:#fff;--bg-elevated:#edf3fa;--text-primary:#003f5f;--text-secondary:#2c4c6b;--text-tertiary:#607d8b;--border:#bdd3e8;--border-strong:#90b4d9}
+body{background:var(--bg-main);min-height:100vh;display:flex;flex-direction:column;color:var(--text-primary)}
+.app{display:flex;flex-direction:column;height:100vh;width:100%}
+
+/* ============================================ */
+/* 2. HEADER Y ESTADÍSTICAS */
+/* ============================================ */
+.header{padding:16px 20px;background:var(--bg-card);border-bottom:1px solid var(--border);color:var(--text-primary)}
+.header h1{font-size:1.4rem;display:flex;align-items:center;gap:8px;color:var(--text-primary)}
+.header h1 small{font-size:.8rem;color:var(--text-tertiary);font-weight:400}
+.global-stats{background:var(--bg-elevated);padding:8px 16px;border-radius:30px;border:1px solid var(--border);color:var(--text-secondary);font-size:.85rem;margin-top:10px;white-space:nowrap;overflow-x:auto;font-weight:500}
+
+/* ============================================ */
+/* 3. CONTENIDO PRINCIPAL Y SECCIONES */
+/* ============================================ */
+.main-content{flex:1;padding:20px;padding-bottom:80px;background:var(--bg-main)}
+.section-display{display:block}
+.section-display.hidden{display:none}
+.section-detail{display:none}
+.section-detail.active{display:block}
+.section-tabla{display:none;padding:15px;background:var(--bg-main);min-height:calc(100vh - 120px)}
+.section-tabla.active{display:block}
+
+/* ============================================ */
+/* 4. ARMARIO INTERACTIVO (CABINET) */
+/* ============================================ */
+.cabinet-container{position:relative;background:var(--bg-card);border-radius:16px;overflow:hidden;border:2px solid var(--border-strong);aspect-ratio:4/3;width:100%;margin-bottom:20px}
+.cabinet-svg{display:block;width:100%;height:100%;background:var(--bg-elevated)}
+.interactive-point{position:absolute;min-width:80px;height:38px;background:var(--accent);border:3px solid var(--bg-card);border-radius:8px;transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 4px 6px -1px rgba(0,0,0,.1);transition:all .2s;z-index:20;display:flex;align-items:center;justify-content:center;color:var(--text-primary);font-weight:600;font-size:.85rem;padding:0 12px;white-space:nowrap}
+.interactive-point:hover{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 0 0 3px rgba(234,179,8,.3)}
+.interactive-point.selected{background:var(--success);border-color:var(--bg-card);box-shadow:0 0 0 4px rgba(16,185,129,.3)}
+.point-badge{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:24px;height:24px;font-size:.8rem;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-card);font-weight:700}
+
+/* ============================================ */
+/* 5. TARJETA DE PUNTO SELECCIONADO */
+/* ============================================ */
+.selected-point-card{background:linear-gradient(135deg,var(--bg-card),var(--bg-elevated));border-radius:16px;padding:18px;margin-bottom:20px;border:1px solid var(--border)}
+.selected-point-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.selected-point-icon{width:48px;height:48px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.selected-point-title h2{color:var(--text-primary);font-size:1.2rem;margin-bottom:4px}
+.selected-point-title span{color:var(--text-tertiary);font-size:.8rem}
+.badge{padding:6px 12px;border-radius:20px;font-size:.75rem;color:#fff;font-weight:500}
+.badge.superior{background:var(--primary)}
+.badge.media{background:var(--success)}
+.badge.inferior{background:var(--secondary)}
+
+/* ============================================ */
+/* 6. PESTAÑAS (TABS) */
+/* ============================================ */
+.tab-buttons{display:flex;gap:12px;margin-bottom:20px}
+.tab-btn{flex:1;padding:12px;border:none;border-radius:12px;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .3s;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border)}
+.tab-btn.active{background:#0077be;color:#fff;border-color:var(--primary)}
+.tab-btn.active.tornillos{background:#e87722}
+.tab-btn.piezas.active{background:#10b981}
+#btnCalcularTornilleria{background:linear-gradient(135deg,#e87722,#f39c12);color:#fff;border:none;padding:12px 20px;font-weight:600;border-radius:12px;box-shadow:0 4px 15px rgba(232,119,34,.3);transition:all .3s ease;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+#btnCalcularTornilleria:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(232,119,34,.4)}
+
+/* ============================================ */
+/* 7. LISTA DE MONTAJES (ASSEMBLIES) */
+/* ============================================ */
+.assemblies-list{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.assembly-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s}
+.assembly-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.assembly-card.selected-assembly{border-color:var(--primary);background:#eef2ff}
+.assembly-card.selected-fastener{border-color:var(--secondary);background:#fff7ed}
+.assembly-card.selected-parts{border-color:var(--primary);background:#e8f0fe}
+.assembly-header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.assembly-icon{width:50px;height:50px;background:var(--bg-elevated);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;border:1px solid var(--border)}
+.assembly-img{width:100%;height:100%;object-fit:cover}
+.assembly-title h3{color:var(--text-primary);font-size:1rem;margin-bottom:4px;font-weight:600}
+.assembly-title span{color:var(--text-tertiary);font-size:.75rem}
+.assembly-preview{display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.preview-item{flex:1;text-align:center;background:var(--bg-elevated);padding:6px;border-radius:8px}
+.preview-value{color:var(--primary);font-weight:700;font-size:1rem}
+.preview-label{color:var(--text-tertiary);font-size:.65rem;text-transform:uppercase}
+
+/* ============================================ */
+/* 8. TORNILLERÍA Y PIEZAS */
+/* ============================================ */
+.fastener-card-montaje,.pieza-card-montaje{background:var(--bg-main);border-radius:14px;padding:14px;border-left:4px solid;transition:all .2s}
+.fastener-card-montaje:hover,.pieza-card-montaje:hover{transform:translateX(4px);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.fastener-header-montaje,.pieza-header-montaje{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.fastener-info,.pieza-info{flex:1}
+.fastener-tipo,.pieza-tipo{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.fastener-icono,.pieza-icono{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem}
+.fastener-nombre,.pieza-nombre{font-weight:700;font-size:.95rem;color:var(--text-primary)}
+.fastener-medida,.pieza-medida{font-size:.85rem;color:var(--text-tertiary);font-family:monospace;margin-bottom:4px}
+.fastener-grupo,.pieza-ref{font-size:.7rem;color:var(--text-tertiary);margin-top:4px}
+.fastener-cantidad,.pieza-cantidad{font-size:.85rem;font-weight:700;padding:4px 12px;border-radius:30px;color:#fff;white-space:nowrap}
+.fastener-detalles,.pieza-detalles{display:flex;gap:16px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);flex-wrap:wrap}
+.detalle-item{display:flex;align-items:center;gap:6px;font-size:.8rem}
+.detalle-label{color:var(--text-tertiary)}
+.detalle-valor{color:var(--text-primary);font-weight:500}
+
+/* ============================================ */
+/* 9. SECCIONES DE MONTAJE AGRUPADAS */
+/* ============================================ */
+.seccion-montaje,.seccion-montaje-piezas{margin-bottom:24px;background:var(--bg-card);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+.seccion-montaje-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--bg-elevated);border-bottom:3px solid}
+.seccion-montaje-titulo{display:flex;align-items:center;gap:10px}
+.seccion-montaje-titulo .seccion-icono{font-size:1.4rem}
+.seccion-montaje-titulo h4{font-size:1rem;font-weight:600;color:var(--text-primary);margin:0}
+.seccion-montaje-total{font-size:.75rem;font-weight:600;padding:4px 12px;border-radius:30px;color:#fff}
+.seccion-montaje-cards{padding:16px;display:flex;flex-direction:column;gap:12px}
+
+/* ============================================ */
+/* 10. INVENTARIO DE TORNILLERÍA */
+/* ============================================ */
+.inventario-secciones{display:flex;flex-direction:column;gap:24px;margin-top:20px}
+.seccion-inventario{background:var(--bg-card);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+.seccion-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--bg-elevated);border-bottom:3px solid}
+.seccion-titulo{display:flex;align-items:center;gap:12px}
+.seccion-header h4{font-size:1.2rem;font-weight:600;color:var(--text-primary)}
+.seccion-total{font-size:.85rem;font-weight:600;padding:6px 14px;border-radius:30px;color:#fff}
+.seccion-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:16px}
+.inventario-card-simple{background:var(--bg-main);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border)}
+.card-medida{font-family:monospace;font-size:.95rem;font-weight:600;color:var(--text-primary)}
+.card-cantidad{font-size:.85rem;font-weight:700;padding:4px 12px;border-radius:20px;color:#fff}
+.resumen-estacion{background:linear-gradient(135deg,var(--bg-elevated),var(--bg-card));padding:20px;border-radius:16px;margin-bottom:25px;border:1px solid var(--border)}
+.stats-globales{display:flex;gap:15px;margin-top:15px;flex-wrap:wrap}
+.stat-item{background:#fff;padding:8px 16px;border-radius:30px;border:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.stat-item .numero{font-weight:700;color:var(--secondary);font-size:1.1rem}
+.total-general{background:linear-gradient(135deg,var(--secondary),var(--accent));color:#fff;padding:15px 20px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.total-general .numero{font-size:2rem;font-weight:700}
+.filtros-rapidos{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filtro-btn{background:var(--bg-card);border:1px solid var(--border);padding:8px 16px;border-radius:30px;cursor:pointer}
+.filtro-btn.active{background:var(--primary);color:#fff}
+
+/* ============================================ */
+/* 11. BOTONES, NAVEGACIÓN INFERIOR Y MODALES BASE */
+/* ============================================ */
+.back-button{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);padding:10px 18px;border-radius:30px;font-size:.9rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;font-weight:500}
+.admin-button{position:fixed;bottom:90px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--primary);border:3px solid var(--bg-card);color:#fff;font-size:1.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:100}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 8px;z-index:50}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text-tertiary);font-size:.65rem;cursor:pointer;padding:4px 0 0;font-weight:500}
+.nav-item.active{color:var(--primary)}
+.nav-item .nav-icon{font-size:1.2rem}
+.modal,.modal-tornilleria{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:10000;justify-content:center;align-items:center;backdrop-filter:blur(4px)}
+.modal.active,.modal-tornilleria.active{display:flex}
+.modal-content-fullscreen,.modal-tornilleria-content{background:var(--bg-card);width:100%;height:100%;overflow-y:auto;padding:20px;position:relative;border-radius:0}
+.modal-header-fullscreen,.modal-tornilleria-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid var(--border);background:var(--bg-card);position:relative;top:0;z-index:10}
+.modal-header-fullscreen h2,.modal-tornilleria-header h2{color:var(--text-primary);font-size:1.2rem;display:flex;align-items:center;gap:10px;margin:0}
+.close-modal,.modal-tornilleria-close{background:0 0;border:none;color:var(--text-tertiary);font-size:2rem;cursor:pointer;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.close-modal:hover,.modal-tornilleria-close:hover{background:var(--bg-elevated);color:var(--danger)}
+.save-indicator{position:fixed;bottom:90px;left:20px;background:var(--success);color:#fff;padding:10px 20px;border-radius:30px;z-index:1000;transition:all .3s;font-weight:500}
+.save-indicator.hidden{opacity:0;pointer-events:none;transform:translateY(20px)}
+
+/* ============================================ */
+/* 12. ADMINISTRACIÓN: TABS, PANELES, LISTAS */
+/* ============================================ */
+.admin-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.admin-tab{padding:10px 18px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:30px;color:var(--text-secondary);cursor:pointer;font-size:.85rem;font-weight:500;transition:all .2s}
+.admin-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+.items-list{background:var(--bg-main);border-radius:12px;padding:12px;max-height:none;overflow-y:visible;border:1px solid var(--border)}
+.list-item{padding:12px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px;transition:all .2s}
+.list-item:hover{background:var(--bg-elevated)}
+.list-item.selected{background:#dbeafe;border-left:4px solid var(--primary)}
+.list-item-title{font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.list-item-sub{font-size:.8rem;color:var(--text-tertiary)}
+.edit-form{background:var(--bg-main);border-radius:16px;padding:18px;margin-top:20px;border:1px solid var(--border)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.action-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.imagenes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;margin-top:10px;max-height:250px;overflow-y:auto;padding:8px;background:var(--bg-main);border-radius:10px;border:1px solid var(--border)}
+.imagen-miniatura{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+.imagen-miniatura img{width:100%;height:100%;object-fit:cover}
+.imagen-miniatura button{position:absolute;top:4px;right:4px;width:22px;height:22px;background:var(--danger);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.imagen-contador{color:var(--text-tertiary);font-size:.8rem;margin-left:10px}
+.btn-icon{background:0 0;border:none;font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:6px;color:var(--text-tertiary)}
+.btn-icon:hover{background:var(--bg-elevated);color:var(--danger)}
+.btn-add{width:100%;padding:10px;background:var(--bg-elevated);border:1px dashed var(--border);border-radius:10px;color:var(--text-secondary);cursor:pointer;font-size:.85rem;margin-top:10px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;color:var(--text-secondary);margin-bottom:6px;font-size:.8rem;font-weight:500}
+.form-group input,.form-group select{padding:10px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:.9rem;width:100%}
+.btn{padding:10px 16px;border:none;border-radius:30px;font-size:.85rem;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.grupo-card{background:var(--bg-main);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+.grupo-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--secondary)}
+.item-simple{background:var(--bg-card);padding:12px;margin-bottom:12px;border-radius:8px;border:1px solid var(--border)}
+.select-tipo,.input-medida{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--bg-card);color:var(--text-primary)}
+.campos-extra{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+.campos-extra.visible{display:block}
+.btn-eliminar-item{background:var(--danger);color:#fff;border:none;border-radius:6px;width:36px;height:36px;cursor:pointer}
+.btn-add-item{width:100%;padding:10px;background:var(--bg-elevated);border:2px dashed var(--border);border-radius:8px;color:var(--text-secondary);cursor:pointer}
+.grupo-card .item-simple>div:first-child{display:grid;grid-template-columns:2fr 0.8fr auto;gap:8px;align-items:center}
+.grupo-card .item-simple .input-medida,.grupo-card .item-simple .input-cantidad,.grupo-card .item-simple .select-tipo{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--bg-card);color:var(--text-primary);box-sizing:border-box}
+.grupo-card .item-simple .input-cantidad{-moz-appearance:textfield;appearance:textfield}
+.grupo-card .item-simple .input-cantidad::-webkit-inner-spin-button,.grupo-card .item-simple .input-cantidad::-webkit-outer-spin-button{opacity:0.5}
+.grupo-card .item-simple .select-tipo{cursor:pointer}
+.grupo-card .item-simple .campos-extra>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btn-eliminar-item{background:var(--danger);color:#fff;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+
+/* ============================================ */
+/* 13. BUSCADOR */
+/* ============================================ */
+.buscador-container{position:relative;margin:15px 0}
+.buscador-input-wrapper{position:relative;display:flex;align-items:center;background:var(--bg-card);border:2px solid var(--border);border-radius:30px}
+.buscador-input-wrapper:focus-within{border-color:var(--primary);box-shadow:0 0 0 4px rgba(0,119,190,.1)}
+.buscador-icon{position:absolute;left:15px;color:var(--text-tertiary);font-size:1.1rem}
+.buscador-input{width:100%;padding:14px 20px 14px 45px;border:none;background:0 0;color:var(--text-primary);font-size:1rem;border-radius:30px;outline:0}
+.buscador-clear{position:absolute;right:15px;background:0 0;border:none;color:var(--text-tertiary);font-size:1.2rem;cursor:pointer;display:none}
+.buscador-resultados{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;margin-top:8px;max-height:400px;overflow-y:auto;z-index:1000;display:none}
+.buscador-resultados.activo{display:block}
+.resultado-item{padding:15px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:12px}
+.resultado-item:hover{background:var(--bg-elevated)}
+.resultado-icono{width:40px;height:40px;background:var(--bg-elevated);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:1px solid var(--border)}
+.resultado-titulo{font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:.95rem}
+.resultado-subtitulo{font-size:.8rem;color:var(--text-tertiary);display:flex;gap:8px}
+.resultado-badge{background:var(--primary);color:#fff;padding:2px 8px;border-radius:12px;font-size:.7rem}
+.resultado-badge.estacion{background:var(--secondary)}
+.resultado-badge.tornillo{background:#e87722}
+.resultado-badge.pieza{background:#43a047}
+.resultado-coincidencia{background:var(--accent);color:var(--text-primary);padding:2px 4px;border-radius:4px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-tertiary);background:var(--bg-card);border-radius:16px;border:1px dashed var(--border)}
+.empty-state .big-icon{font-size:3.5rem;margin-bottom:15px;opacity:.5}
+
+/* ============================================ */
+/* 14. MODALES ESPECÍFICOS */
+/* ============================================ */
+.modal-historial {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: var(--bg-card);z-index: 4000;flex-direction: column;overflow-y: auto;}
+.modal-historial.active {display: flex;}
+.modal-historial-header {background: var(--bg-card);border-bottom: 2px solid var(--border);padding: 15px 20px;display: flex;justify-content: space-between;align-items: center;z-index: 10;}
+.modal-historial-header h3 {color: var(--text-primary);margin: 0;}
+.modal-historial-body {padding: 20px;flex: 1;}
+.historial-item {background: var(--bg-main);border: 1px solid var(--border);border-radius: 16px;padding: 15px;margin-bottom: 15px;cursor: pointer;}
+.historial-item:hover {background: var(--bg-elevated);}
+.historial-fecha {font-size: 0.75rem;color: var(--text-tertiary);}
+.btn-ver-historial {background: #6a1b9a;color: white;border: none;padding: 10px 20px;border-radius: 30px;cursor: pointer;margin-right: 10px;}
+
+.modal-tabla {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: var(--bg-card);z-index: 4000;flex-direction: column;overflow-y: auto;}
+.modal-tabla.active {display: flex;}
+.modal-tabla-header {background: var(--bg-card);border-bottom: 2px solid var(--border);padding: 15px 20px;display: flex;justify-content: space-between;align-items: center;z-index: 10;position: sticky;top: 0;}
+.modal-tabla-header h2 {color: var(--text-primary);margin: 0;font-size: 1.2rem;}
+.modal-tabla-body {padding: 20px;flex: 1;}
+.modal-tabla-close {background: none;border: none;color: var(--text-tertiary);font-size: 2rem;cursor: pointer;width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;justify-content: center;transition: all .2s;}
+.modal-tabla-close:hover {background: var(--bg-elevated);color: var(--danger);}
+
+.modal-detalle {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: var(--bg-card);z-index: 4000;flex-direction: column;overflow-y: auto;}
+.modal-detalle.active {display: flex;}
+.modal-detalle-header {background: var(--bg-card);border-bottom: 2px solid var(--border);padding: 15px 20px;display: flex;justify-content: space-between;align-items: center;z-index: 10;position: sticky;top: 0;}
+.modal-detalle-header h2 {color: var(--text-primary);margin: 0;font-size: 1.2rem;}
+.modal-detalle-body {padding: 20px;flex: 1;}
+.modal-detalle-close {background: none;border: none;color: var(--text-tertiary);font-size: 2rem;cursor: pointer;width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;justify-content: center;transition: all .2s;}
+.modal-detalle-close:hover {background: var(--bg-elevated);color: var(--danger);}
+
+/* ============================================ */
+/* 15. CRONÓMETRO */
+/* ============================================ */
+.crono-btn {transition: all 0.2s ease;font-weight: 600;}
+.crono-btn:hover {transform: scale(1.02);opacity: 0.9;}
+.crono-btn:active {transform: scale(0.98);}
+.crono-badge-flotante {position: fixed;top: 70px;right: 20px;background: linear-gradient(135deg, #2e7d32, #1b5e20);color: white;padding: 10px 16px;border-radius: 40px;font-family: monospace;font-size: 1.1rem;font-weight: bold;z-index: 10000;box-shadow: 0 4px 15px rgba(0,0,0,0.3);display: none;align-items: center;gap: 10px;cursor: pointer;transition: all 0.2s ease;border: 2px solid white;}
+.crono-badge-flotante:hover {transform: scale(1.05);box-shadow: 0 6px 20px rgba(0,0,0,0.4);}
+.crono-badge-flotante .icono {font-size: 1.2rem;}
+.crono-badge-flotante .tiempo {letter-spacing: 1px;}
+.crono-badge-flotante .montaje-nombre {font-size: 0.7rem;opacity: 0.9;max-width: 150px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
+.crono-badge-flotante.negativo {background: linear-gradient(135deg, #f44336, #d32f2f);animation: pulse-red-badge 0.8s infinite;}
+@keyframes pulse-red-badge {0% { opacity: 1; }50% { opacity: 0.7; }100% { opacity: 1; }}
+
+/* ============================================ */
+/* 16. PANTALLA DE SELECCIÓN DE OPERACIÓN */
+/* ============================================ */
+.screen-operacion {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: var(--bg-main);z-index: 3000;display: flex;flex-direction: column;justify-content: center;align-items: center;padding: 20px;}
+.screen-operacion.hidden {display: none;}
+.operacion-panel {background: var(--bg-card);border-radius: 24px;padding: 30px;width: 100%;max-width: 400px;text-align: center;box-shadow: 0 10px 40px rgba(0,0,0,0.1);}
+.operacion-input {width: 100%;padding: 15px;font-size: 1.2rem;text-align: center;border: 2px solid var(--border);border-radius: 12px;margin: 20px 0;}
+.operacion-btn {background: var(--primary);color: white;border: none;padding: 12px 24px;border-radius: 30px;font-size: 1rem;cursor: pointer;width: 100%;}
+.resumen-operacion {background: linear-gradient(135deg, var(--primary), var(--primary-dark));color: white;padding: 12px 15px;border-radius: 12px;margin-bottom: 15px;display: flex;justify-content: space-between;flex-wrap: wrap;}
+.tabla-container {background: var(--bg-card);border-radius: 16px;padding: 15px;overflow-x: auto;}
+.tabla-container table {width: 100%;border-collapse: collapse;font-size: 0.8rem;}
+.tabla-container th,.tabla-container td {padding: 10px 8px;text-align: left;border-bottom: 1px solid var(--border);}
+.tabla-container th {background: var(--primary);color: white;position: sticky;top: 0;}
+.total-dia {text-align: right;font-weight: bold;margin-top: 15px;padding-top: 10px;border-top: 2px solid var(--border);}
+.btn-finalizar {background: #e87722;color: white;border: none;padding: 10px 20px;border-radius: 30px;cursor: pointer;}
+
+/* ============================================ */
+/* 17. ESTILOS ESPECÍFICOS: CHECKLIST EN ADMIN */
+/* ============================================ */
+#panelChecklist .items-list {background: var(--bg-main);border-radius: 12px;border: 1px solid var(--border);}
+#panelChecklist .list-item {border-bottom: 1px solid var(--border);cursor: pointer;transition: background 0.2s;}
+#panelChecklist .list-item:hover {background: var(--bg-elevated);}
+#panelChecklist .list-item:last-child {border-bottom: none;}
+#btnAddChecklistItem {background: var(--primary);color: white;padding: 14px;border-radius: 12px;font-weight: 600;transition: all 0.2s;}
+#btnAddChecklistItem:hover {background: var(--primary-dark);transform: translateY(-2px);}
+
+/* ============================================ */
+/* 18. MEDIA QUERIES (RESPONSIVE) */
+/* ============================================ */
+@media(max-width:600px){.seccion-montaje-header{flex-direction:column;gap:10px;text-align:center}.fastener-header-montaje,.pieza-header-montaje{flex-direction:column}.fastener-cantidad,.pieza-cantidad{align-self:flex-start}.fastener-detalles,.pieza-detalles{flex-direction:column;gap:8px}}
+@media(max-width:600px){.grupo-card .item-simple>div:first-child{grid-template-columns:1fr;gap:6px}.grupo-card .item-simple .campos-extra>div{grid-template-columns:1fr}}
+@media screen and (max-width:600px){.seccion-header{flex-direction:column;gap:10px;text-align:center}.seccion-cards{grid-template-columns:1fr}}
+@media (hover:none) and (pointer:coarse){.interactive-point,.assembly-card,.fastener-card,.tab-btn,.btn{cursor:default}.btn-eliminar-item,.close-modal,.modal-tornilleria-close{min-width:44px;min-height:44px}}
+@media (max-width: 600px){.cronometro-montaje > div{flex-direction:column;align-items:stretch !important}.tiempo-actual{text-align:center;margin-bottom:8px}.crono-btn{flex:1;padding:8px 12px !important}}
+@media (max-width: 600px){.crono-badge-flotante{top:auto;bottom:560px;right:20px;padding:8px 14px;font-size:0.9rem}.crono-badge-flotante .montaje-nombre{display:none}}
+
+/* ============================================ */
+/* 19. BADGE GLOBAL DE TIEMPO TOTAL */
+/* ============================================ */
+.global-time-badge{position:fixed;bottom:70px;left:20px;right:20px;background:linear-gradient(135deg,#1a237e,#0d47a1);color:white;border-radius:16px;padding:12px 16px;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.3);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);transition:all .3s ease}
+.global-time-badge.critico{background:linear-gradient(135deg,#b71c1c,#d32f2f);animation:pulse-warning 1s infinite}
+@keyframes pulse-warning{0%{opacity:1}50%{opacity:.85;box-shadow:0 4px 25px rgba(244,67,54,.5)}100%{opacity:1}}
+.global-time-stats{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.stat-block{flex:1;text-align:center;min-width:100px}
+.stat-block .label{font-size:.7rem;opacity:.8;letter-spacing:.5px}
+.stat-block .value{font-size:1.3rem;font-weight:bold;font-family:monospace;letter-spacing:1px}
+.progress-bar-container{margin-top:10px;height:6px;background:rgba(255,255,255,.3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#ffcd00;width:0%;transition:width .3s ease;border-radius:3px}
+.montajes-pendientes{font-size:.7rem;text-align:center;margin-top:8px;opacity:.9}
+@media(max-width:600px){.global-time-badge{bottom:65px;left:10px;right:10px;padding:8px 12px}.stat-block .value{font-size:1rem}.stat-block .label{font-size:.6rem}}
+
+#navPausa .nav-icon,#navReanudar .nav-icon{font-size:1.2rem}
+#navPausa,#navReanudar{transition:all .2s}
+#navPausa:hover,#navReanudar:hover{transform:scale(1.05)}
+
+/* ============================================ */
+/* ESTADO DE MONTAJES - TARJETAS INDIVIDUALES */
+/* ============================================ */
+.estado-montaje-card{background:var(--bg-card);border-radius:16px;padding:16px;margin-bottom:12px;border-left:6px solid;transition:all .2s}
+.estado-montaje-card:hover{transform:translateX(4px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.estado-montaje-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.estado-montaje-nombre{font-weight:700;font-size:1rem;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.estado-montaje-tipo{font-size:.7rem;color:var(--text-tertiary);background:var(--bg-elevated);padding:2px 8px;border-radius:20px}
+.estado-tiempos{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.estado-tiempo-item{flex:1;text-align:center}
+.estado-tiempo-label{font-size:.65rem;color:var(--text-tertiary);text-transform:uppercase}
+.estado-tiempo-valor{font-size:1.1rem;font-weight:700;font-family:monospace}
+.estado-badge-pendiente{background:#607d8b;color:white;padding:4px 12px;border-radius:20px;font-size:.7rem}
+.estado-badge-curso{background:#ff9800;color:white;padding:4px 12px;border-radius:20px;font-size:.7rem;animation:pulse-orange 1s infinite}
+.estado-badge-completado{background:#4caf50;color:white;padding:4px 12px;border-radius:20px;font-size:.7rem}
+@keyframes pulse-orange{0%{opacity:1}50%{opacity:.7}100%{opacity:1}}
+.estacion-titulo-modal{background:var(--primary);color:white;padding:12px 16px;border-radius:12px;margin-top:16px;margin-bottom:12px;font-weight:600}
+.resumen-global-modal{background:linear-gradient(135deg,#1a237e,#0d47a1);color:white;padding:15px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+/* ============================================ */
+/* ESTILOS UNIFICADOS PARA TQC (TODAS ORIENTACIONES) */
+/* ============================================ */
+.modal-tqc-operacion-header {background: #0077be !important;color: white !important;padding: 12px 15px !important;border-radius: 12px !important;margin: 15px 0 10px 0 !important;font-size: 1rem !important;font-weight: bold !important;display: flex !important;justify-content: space-between !important;align-items: center !important;flex-wrap: wrap !important;gap: 8px !important;}
+.modal-tqc-operacion-header span:first-child {color: white !important;font-size: 1rem !important;}
+.modal-tqc-operacion-header span:last-child {background: rgba(255,255,255,0.25) !important;color: white !important;padding: 4px 12px !important;border-radius: 30px !important;font-size: 0.8rem !important;}
+.modal-tqc-aviso-item {background: white !important;border: 1px solid #ddd !important;border-radius: 12px !important;padding: 12px 15px !important;margin-bottom: 10px !important;}
+.modal-tqc-aviso-titulo {font-weight: bold !important;font-size: 0.95rem !important;color: #333 !important;display: flex !important;align-items: center !important;gap: 8px !important;flex-wrap: wrap !important;margin-bottom: 8px !important;}
+.modal-tqc-aviso-fecha {font-size: 0.7rem !important;color: #888 !important;margin-bottom: 10px !important;}
+.modal-tqc-btn-revisado {background: #4caf50 !important;color: white !important;border: none !important;padding: 10px 16px !important;border-radius: 30px !important;font-size: 0.8rem !important;font-weight: bold !important;cursor: pointer !important;width: 100% !important;}
+.modal-tqc-badge-nuevo {background: #9c27b0 !important;color: white !important;padding: 2px 10px !important;border-radius: 20px !important;font-size: 0.65rem !important;font-weight: bold !important;}
+.modal-tqc-resumen {background: #9c27b0 !important;color: white !important;padding: 12px 15px !important;border-radius: 12px !important;margin-bottom: 15px !important;display: flex !important;justify-content: space-between !important;align-items: center !important;font-size: 0.9rem !important;font-weight: bold !important;}
+.modal-tqc-resumen span:last-child {background: white !important;color: #9c27b0 !important;padding: 4px 14px !important;border-radius: 30px !important;font-size: 1rem !important;}
+#btnEscuchaTQC {background: #4caf50 !important;color: white !important;border: none !important;padding: 12px 20px !important;border-radius: 30px !important;margin-bottom: 20px !important;cursor: pointer !important;font-weight: bold !important;width: 100% !important;font-size: 1rem !important;}
+@media (max-width: 600px) {.modal-tqc-operacion-header {padding: 10px 12px !important;font-size: 0.85rem !important;}.modal-tqc-aviso-item {padding: 10px 12px !important;}.modal-tqc-aviso-titulo {font-size: 0.85rem !important;}.modal-tqc-btn-revisado {padding: 8px 14px !important;font-size: 0.75rem !important;}#btnEscuchaTQC {padding: 10px 16px !important;font-size: 0.9rem !important;}}
+
+/* Pantalla de Login */
+.screen-login {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: var(--bg-main);z-index: 4000;display: flex;flex-direction: column;justify-content: center;align-items: center;padding: 20px;}
+.screen-login.hidden {display: none;}
+.login-panel {background: var(--bg-card);border-radius: 24px;padding: 30px;width: 100%;max-width: 350px;text-align: center;box-shadow: 0 10px 40px rgba(0,0,0,0.1);}
+.input-login {width: 100%;padding: 14px;border: 2px solid var(--border);border-radius: 12px;margin: 10px 0;font-size: 1rem;}
+.btn-login {background: var(--primary);color: white;border: none;padding: 14px;border-radius: 30px;font-size: 1rem;cursor: pointer;width: 100%;margin-top: 10px;}
+.info-usuario {background: var(--bg-elevated);padding: 10px 15px;border-radius: 12px;margin-bottom: 15px;display: flex;justify-content: space-between;align-items: center;gap: 10px;flex-wrap: wrap;}
+.btn-cerrar-sesion {background: #e87722;color: white;border: none;padding: 6px 14px;border-radius: 20px;cursor: pointer;font-size: 0.8rem;}
+#screenLogin {display: flex !important;position: fixed !important;top: 0 !important;left: 0 !important;width: 100% !important;height: 100% !important;background: #f5f9ff !important;z-index: 99999 !important;flex-direction: column !important;justify-content: center !important;align-items: center !important;}
+#screenLogin.hidden {display: none !important;}
+.app {display: block !important;}
+
+
+/* Grid automático para montajes en admin */
+#montajesList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    max-height: none;
+    overflow-y: visible;
+    padding: 8px;
+}
+
+#montajesList .list-item {
+    margin: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#montajesList .list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: var(--primary);
+}
+
+#montajesList .list-item.selected {
+    background: #dbeafe;
+    border-left: 4px solid var(--primary);
+}
+
+#montajesList .list-item-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#montajesList .list-item-sub {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+
+/* Indicador de conexión */
+.connection-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+.connection-indicator.online {
+    background: #4caf50;
+    color: white;
+}
+
+.connection-indicator.offline {
+    background: #f44336;
+    color: white;
+    animation: pulse-offline 1.5s infinite;
+}
+
+.connection-indicator.checking {
+    background: #ff9800;
+    color: white;
+}
+
+@keyframes pulse-offline {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.connection-indicator .indicator-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+}
+
+.connection-indicator.online .indicator-dot {
+    background: #a5d6a7;
+}
+
+.connection-indicator.offline .indicator-dot {
+    background: #ffcdd2;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<button id="testCamaraBtn" style="position:fixed; top:100px; right:10px; background:blue; color:white; z-index:99999; padding:10px;">TEST CÁMARA</button>
+<!-- Indicador de conexión -->
+<div id="connectionIndicator" class="connection-indicator checking">
+    <span class="indicator-dot"></span>
+    <span id="connectionText">Conectando...</span>
+</div>
+
+<!-- PANTALLA DE LOGIN -->
+<!--<div class="screen-login" id="screenLogin">
+    <div class="login-panel">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 3rem;">🔧</span>
+            <h2>Linea TRAXX</h2>
+            <p>Acceso al sistema</p>
+        </div>
+        <div id="loginForm">
+            <input type="text" id="loginUsuario" class="input-login" placeholder="👤 Usuario" autocomplete="off">
+            <input type="password" id="loginPassword" class="input-login" placeholder="🔒 Contraseña">
+            <button class="btn-login" onclick="iniciarSesion()">🔐 Iniciar Sesión</button>
+        </div>
+    </div>
+</div>-->
+
+<!-- HEADER -->
+<div class="header">
+    <h1><span>🗄️</span> Linea TRAXX <small>Instrucciones de Montajes</small></h1>
+    <div style="margin:10px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+            <label for="modeloSelector" style="font-weight:600">Modelo:</label>
+            <select id="modeloSelector" onchange="cambiarModelo()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card)">
+                <option value="MS3">🔷 MS3</option>
+                <option value="DC3">🔶 DC3</option>
+            </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <label for="selectorOperacionActiva" style="font-weight:600">🔧 Operación:</label>
+            <select id="selectorOperacionActiva" onchange="cambiarOperacionActiva()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card)">
+                <option value="">Seleccionar...</option>
+            </select>
+        </div>
+    </div>
+    <div id="infoUsuarioHeader" style="display: none; align-items: center; gap: 10px; margin-top: 10px; padding: 8px; background: var(--bg-elevated); border-radius: 12px; justify-content: space-between;">
+        <span id="infoUsuarioTexto">👤 -</span>
+        <div style="display: flex; gap: 8px;">
+            <button id="btnSalirOperacionHeader" onclick="menuSalir()" style="background: #ff9800; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer;">🚪 Salir</button>
+            <button id="btnCerrarSesionHeader" onclick="cerrarSesion()" style="background: #e87722; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer;">🔓 Cerrar Sesión</button>
+        </div>
+    </div>
+    <div class="global-stats" id="globalStats"></div>
+    <div class="buscador-container">
+        <div class="buscador-input-wrapper">
+            <span class="buscador-icon">🔍</span>
+            <input type="text" class="buscador-input" id="buscadorGlobal" placeholder="Buscar montajes, tornillos, piezas..." autocomplete="off">
+            <button class="buscador-clear" id="buscadorClear">✕</button>
+        </div>
+        <div class="buscador-resultados" id="buscadorResultados"></div>
+    </div>
+</div>
+
+<!-- CONTENIDO PRINCIPAL -->
+<div class="main-content" id="mainContent">
+    <div class="section-display" id="sectionDisplay">
+        <div class="cabinet-container" id="cabinetContainer">
+            <svg class="cabinet-svg" viewBox="0 0 1000 600">
+                <rect x="20" y="-50" width="960" height="700" fill="#e2e8f0" stroke="#94a3b8" stroke-width="6" rx="15"/>
+                <rect x="40" y="-30" width="920" height="310" fill="#cbd5e1" stroke="#64748b" stroke-width="4" rx="10"/>
+                <rect x="40" y="320" width="920" height="310" fill="#cbd5e1" stroke="#64748b" stroke-width="4" rx="10"/>
+                <line x1="20" y1="300" x2="980" y2="300" stroke="#eab308" stroke-width="4"/>
+                <line x1="500" y1="-50" x2="500" y2="300" stroke="#2563eb" stroke-width="4"/>
+                <line x1="340" y1="300" x2="340" y2="650" stroke="#10b981" stroke-width="4"/>
+                <line x1="660" y1="300" x2="660" y2="650" stroke="#10b981" stroke-width="4"/>
+                <circle cx="100" cy="130" r="12" fill="#64748b" stroke="#475569" stroke-width="3"/>
+                <circle cx="100" cy="470" r="12" fill="#64748b" stroke="#475569" stroke-width="3"/>
+                <circle cx="900" cy="130" r="12" fill="#64748b" stroke="#475569" stroke-width="3"/>
+                <circle cx="900" cy="470" r="12" fill="#64748b" stroke="#475569" stroke-width="3"/>
+            </svg>
+            <div id="puntosContainer"></div>
+        </div>
+        <div style="margin-top:15px"><p style="color:var(--text-tertiary);text-align:center;font-size:.85rem">Toca un punto amarillo para ver sus montajes</p></div>
+    </div>
+
+    <div class="section-detail" id="sectionDetail">
+        <button class="back-button" onclick="goToDisplay()"><span>←</span> Volver al armario</button>
+        <div class="selected-point-card" id="selectedPointCard">
+            <div class="selected-point-header">
+                <div class="selected-point-icon" id="selectedPointIcon">📍</div>
+                <div class="selected-point-title">
+                    <h2 id="selectedPointName">Selecciona un punto</h2>
+                    <span id="selectedPointDesc">Toca un punto amarillo en el armario</span>
+                </div>
+            </div>
+            <div class="selected-point-badges" id="selectedPointBadges"></div>
+            <div style="margin-top:15px">
+                <button class="btn" id="btnCalcularTornilleria" onclick="calcularTornilleriaEstacion()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px"><span>🔩</span>Calcular Tornillería de Estación</button>
+            </div>
+        </div>
+        <div class="tab-buttons">
+             <button class="tab-btn piezas" onclick="showPartsTab()" id="tabPartsBtn">⚙️ Materiales</button>       
+            <button class="tab-btn montajes" onclick="showAssembliesTab()" id="tabAssembliesBtn">📦 Montajes</button>
+            <button class="tab-btn tornillos" onclick="showFastenersTab()" id="tabFastenersBtn">🔩 Tornillería</button>
+         </div>
+        <div id="assembliesTab"><div id="assembliesContainer" class="assemblies-list"></div></div>
+        <div id="fastenersTab" style="display:none"><div id="fastenersDetail"></div></div>
+        <div id="partsTab" style="display:none"><div id="partsDetail"></div></div>
+    </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchSection('display')" id="navDisplay"><span class="nav-icon">🗄️</span><span>Armario</span></div>
+    <div class="nav-item" onclick="abrirModalTabla()" id="navTabla"><span class="nav-icon">📊</span><span>Tabla</span></div>
+    <div class="nav-item" onclick="abrirModalTQC()" id="navTQC" style="position:relative;"><span class="nav-icon">🔔</span><span>TQC</span><span id="badgeTQC" style="display:none; position:absolute; top:0; right:15px; background:#9c27b0; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center;">0</span></div>
+    <div class="nav-item" onclick="verHistorial()" id="navHistorial"><span class="nav-icon">📜</span><span>Historial</span></div>
+    <div class="nav-item" onclick="abrirModalEstadoMontajes()" id="navEstado"><span class="nav-icon">📋</span><span>Estado</span></div>
+    <div class="nav-item" onclick="openAdminModal()" id="navAdmin"><span class="nav-icon">⚙️</span><span>Admin</span></div>
+</div>
+
+<div class="save-indicator hidden" id="saveIndicator"><span>✓</span><span>Guardado</span></div>
+
+<!-- MODAL ADMIN -->
+<div class="modal" id="adminModal">
+    <div class="modal-content-fullscreen">
+        <div class="modal-header-fullscreen"><h2>🔧 Panel de Administración</h2><button class="close-modal" onclick="closeAdminModal()">×</button></div>
+        <div class="admin-tabs">
+            <div class="admin-tab active" onclick="switchAdminTab('puntos',event)">📍 Estaciones</div>
+            <div class="admin-tab" onclick="switchAdminTab('materiales',event)">📦 Materiales</div>           
+            <div class="admin-tab" onclick="switchAdminTab('montajes',event)">📦 Montajes</div>
+            <div class="admin-tab" onclick="switchAdminTab('checklist', event)">✅ Checklist</div>
+            <div class="admin-tab" onclick="switchAdminTab('herramientas', event)">🔧 Herramientas</div>
+            <div class="admin-tab" onclick="switchAdminTab('comentarios', event)">💬 Comentarios</div>
+            <div class="admin-tab" onclick="switchAdminTab('tornillos',event)">🔩 Tornillería</div>
+            <div class="admin-tab" onclick="switchAdminTab('piezas',event)">⚙️ Piezas</div>
+            <div class="admin-tab" onclick="switchAdminTab('vinculacion',event)">🔗 Vincular Materiales</div>
+            <div class="admin-tab" onclick="switchAdminTab('alertas',event)">🔔 Alertas</div>
+            <div class="admin-tab" onclick="switchAdminTab('operaciones',event)">🔧 Operaciones</div>
+            <div class="admin-tab" onclick="switchAdminTab('operarios',event)">👥 Operarios</div>
+            <div class="admin-tab" onclick="switchAdminTab('gestionOperarios',event)">👥 Gestionar Operarios</div>
+            <div class="admin-tab" onclick="switchAdminTab('registros', event)">📋 Registros</div>
+      <div class="admin-tab" onclick="switchAdminTab('solicitudes', event)">📢 Solicitudes</div>
+  <div class="admin-tab" onclick="switchAdminTab('registroEscaneos', event)">📋 Registro de Escaneos</div>
+</div>
+        <div class="admin-panel active" id="panelPuntos"><div class="items-list" id="puntosList"></div></div>
+        <div class="admin-panel" id="panelMontajes">
+            <div class="form-group"><label>Seleccionar Estación</label><select id="selectorPuntoMontajes" onchange="cargarMontajesPunto()"></select></div>
+            <div id="montajesList" class="items-list" style="max-height:200px"></div>
+            <div class="edit-form">
+                <h3 style="margin-bottom:15px">Editar Montaje</h3>
+                <input type="hidden" id="editMontajePuntoId"><input type="hidden" id="editMontajeId">
+                <div class="form-group"><label>Nombre</label><input type="text" id="editMontajeNombre" placeholder="Ej: Instalación Bomba"></div>
+                <div class="form-row"><div class="form-group"><label>N° Operación</label><input type="text" id="editMontajeTipo" placeholder="Ej: OP-010"></div><div class="form-group"><label>Icono</label><input type="text" id="editMontajeIcono" placeholder="📦"></div></div>
+                <div class="form-group"><label>⏱️ Tiempo estimado (horas decimales)</label><input type="number" id="editMontajeHorasDecimal" placeholder="Ej: 0.5 = 30 min" step="0.01" min="0" style="width:100%; padding:12px; font-size:1rem; border:1px solid var(--border); border-radius:10px; box-sizing:border-box;"><small style="color:var(--text-tertiary); display:block; margin-top:5px;">0.5 = 30 min | 1.0 = 1 hora | 1.5 = 1h 30min</small></div>
+                <div class="form-group"><label>Imágenes del montaje</label><div style="display:flex;gap:8px;margin-bottom:8px"><input type="file" id="editMontajeImagenes" accept="image/*" multiple style="display:none" onchange="previewMultiplesImagenes(this)"><button class="btn btn-primary" onclick="document.getElementById('editMontajeImagenes').click()">📁 Subir fotos</button><span class="imagen-contador" id="imagenesCount">0 imágenes</span></div><div id="imagenesPreviewContainer" class="imagenes-grid"></div></div>
+                <div class="action-buttons"><button class="btn btn-success" onclick="guardarMontaje()">💾 Guardar</button><button class="btn btn-danger" onclick="eliminarMontaje()">🗑️ Eliminar</button></div>
+            </div>
+        </div>
+        <div class="admin-panel" id="panelTornillos">
+            <div class="form-group"><label>Estación</label><select id="selectorPuntoTornillos" onchange="cargarMontajesTornillos()"></select></div>
+            <div class="form-group"><label>Montaje</label><select id="selectorMontajeTornillos" onchange="cargarGruposTornillos()"></select></div>
+            <div id="gruposTornillosContainer"></div>
+            <button class="btn btn-primary" onclick="agregarGrupoTornillos()" style="width:100%;margin-top:15px">➕ Nuevo Grupo de Tornillería</button>
+        </div>
+        <div class="admin-panel" id="panelPiezas">
+            <div class="form-group"><label>Estación</label><select id="selectorPuntoPiezas" onchange="cargarMontajesPiezas()"></select></div>
+            <div class="form-group"><label>Montaje</label><select id="selectorMontajePiezas" onchange="cargarGruposPiezas()"></select></div>
+            <div id="gruposPiezasContainer"></div>
+            <button class="btn btn-primary" onclick="agregarGrupoPiezas()" style="width:100%;margin-top:15px">➕ Nuevo Grupo de Piezas</button>
+        </div>
+        <div class="admin-panel" id="panelRegistros">
+            <div class="grupo-card">
+                <h3 style="margin-bottom:15px;">📋 Registro de Montajes Completados</h3>
+                <p style="margin-bottom:15px; color:var(--text-tertiary); font-size:0.85rem;">Historial de todos los montajes finalizados por los operarios.</p>
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <input type="text" id="filtroRegistroOperario" placeholder="👤 Filtrar por operario..." style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                    <select id="filtroRegistroModelo" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border);"><option value="">📦 Todos los modelos</option><option value="MS3">🔷 MS3</option><option value="DC3">🔶 DC3</option></select>
+                    <button class="btn btn-primary" onclick="cargarRegistrosMontajesUI()" style="padding:8px 16px;">🔍 Buscar</button>
+                    <button class="btn" onclick="exportarRegistrosCSV()" style="padding:8px 16px; background:#4caf50; color:white;">📥 Exportar CSV</button>
+                </div>
+                <div id="registrosMontajesList" class="items-list" style="max-height:400px; overflow-y:auto;"><div class="empty-state">📋 No hay registros aún. Completa un montaje para verlo aquí.</div></div>
+                <div id="resumenRegistros" style="margin-top:15px; padding:12px; background:var(--bg-elevated); border-radius:12px;"></div>
+            </div>
+        </div>
+        <div class="admin-panel" id="panelOperaciones">
+            <div class="grupo-card">
+                <h3 style="margin-bottom:15px;">🔧 Operaciones Múltiples</h3>
+                <p style="margin-bottom:15px; color:var(--text-tertiary); font-size:0.85rem;">Crea múltiples operaciones que pueden ejecutarse en paralelo.<br>Cada operario puede tener su propia operación activa.</p>
+                <div class="form-group"><label>➕ Nueva Operación</label><div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;"><input type="text" id="nuevaOperacionNumero" placeholder="Ej: 4567" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"><select id="nuevaOperacionModelo" style="padding:10px; border-radius:8px; border:1px solid var(--border);"><option value="MS3">🔷 MS3</option><option value="DC3">🔶 DC3</option></select><button class="btn btn-success" onclick="crearNuevaOperacionAdmin()" style="padding:10px 20px;">➕ Crear</button></div></div>
+                <h4 style="margin:20px 0 10px 0;">📋 Operaciones Activas</h4>
+                <div id="listaOperacionesAdmin" class="items-list" style="max-height:300px; overflow-y:auto;"><div class="empty-state">Cargando...</div></div>
+            </div>
+        </div>
+        <div class="admin-panel" id="panelGestionOperarios">
+            <div class="grupo-card">
+                <h3>👥 Gestión de Operarios</h3>
+                <p style="margin-bottom:15px; color:var(--text-tertiary); font-size:0.85rem;">Crear, editar y eliminar operarios. Los cambios se sincronizan con Firebase.</p>
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;"><button class="btn btn-success" onclick="mostrarFormNuevoOperario()">➕ Nuevo Operario</button><button class="btn btn-primary" onclick="cargarListaOperariosAdmin()">🔄 Actualizar</button></div>
+                <div id="listaOperariosAdminContainer" class="items-list"><div class="empty-state">Cargando operarios...</div></div>
+            </div>
+        </div>
+        <div class="admin-panel" id="panelRegistroEscaneos">
+    <div class="form-group">
+        <label>📍 Filtrar por Estación</label>
+        <select id="filtroEstacionEscaneos" onchange="cargarRegistroEscaneos()" style="width:100%; padding:12px; border-radius:10px;">
+            <option value="">Todas las estaciones</option>
+        </select>
+    </div>
+    <div id="registroEscaneosList" class="items-list" style="max-height:500px; overflow-y:auto;"></div>
+    <button class="btn btn-primary" onclick="exportarRegistroEscaneosCSV()" style="margin-top:15px; padding:10px;">📥 Exportar a CSV</button>
+</div>
+        <div class="admin-panel" id="panelAlertas">
+            <div class="grupo-card"><h4>⏱️ Alertas de Tiempo</h4><div class="form-group"><label><input type="checkbox" id="alertaTiempoExcedido" checked> Notificar cuando se excede el tiempo estimado</label></div><div class="form-group"><label><input type="checkbox" id="alertaProximoAgotar" checked> Avisar cuando quede menos de:</label><select id="alertaTiempoMinutos" style="margin-left:10px; width:auto;"><option value="1">1 minuto</option><option value="2">2 minutos</option><option value="5" selected>5 minutos</option><option value="10">10 minutos</option></select></div></div>
+            <div class="grupo-card"><h4>🔊 Tipos de Notificación</h4><div class="form-group"><label><input type="checkbox" id="alertaSonido" checked> Reproducir sonido</label></div><div class="form-group"><label><input type="checkbox" id="alertaVibracion" checked> Vibrar (móviles)</label></div><div class="form-group"><label><input type="checkbox" id="alertaNotificacionPush" checked> Mostrar notificación en pantalla</label></div></div>
+            <div class="grupo-card"><h4>🎵 Sonidos</h4><div class="form-group"><label>Sonido para completado</label><select id="sonidoCompletado"><option value="ding">🔔 Ding</option><option value="success">✅ Éxito</option><option value="bell">🛎️ Campana</option></select></div><div class="form-group"><label>Sonido para advertencia</label><select id="sonidoAdvertencia"><option value="warning">⚠️ Advertencia</option><option value="alert">🚨 Alerta</option><option value="beep">📟 Beep</option></select></div><button class="btn btn-primary" onclick="probarSonido()">🔊 Probar Sonido</button></div>
+            <button class="btn btn-success" onclick="guardarConfigAlertas()" style="width:100%; margin-top:20px;">💾 Guardar Configuración</button>
+        </div>
+        <div class="admin-panel" id="panelMateriales">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;"><h3 style="margin:0;">📦 Gestión de Materiales (Kanban)</h3><button class="btn btn-success" onclick="mostrarFormNuevoMaterial()" style="padding:10px 20px;">➕ Nuevo Material</button></div>
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;"><select id="filtroCategoriaMateriales" onchange="cargarListaMaterialesAdmin()" style="padding:8px 12px; border-radius:8px;"><option value="todos">📋 Todas las estaciones</option><option value="kanban1">📦 Kanban 1</option><option value="kanban2">📦 Kanban 2</option><option value="kanban3">📦 Kanban 3</option></select><input type="text" id="filtroBusquedaMateriales" placeholder="🔍 Buscar por código o nombre..." onkeyup="cargarListaMaterialesAdmin()" style="padding:8px 12px; border-radius:8px; flex:1; min-width:200px;"></div>
+            <div id="materialesListContainer" class="items-list" style="max-height:500px; overflow-y:auto;"><div class="empty-state">Cargando materiales...</div></div>
+            <div id="formMaterial" style="display:none; margin-top:20px; background:var(--bg-elevated); padding:20px; border-radius:16px;"><h4 id="tituloFormMaterial">➕ Nuevo Material</h4><input type="hidden" id="materialEditId"><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:15px;"><div class="form-group"><label>Código *</label><input type="text" id="materialCodigo" placeholder="Ej: ROS-M8" style="width:100%;"><small style="color:var(--text-tertiary);">Identificador único</small></div><div class="form-group"><label>Nombre *</label><input type="text" id="materialNombre" placeholder="Ej: Rosca M8" style="width:100%;"></div><div class="form-group"><label>Categoría *</label><select id="materialCategoria" style="width:100%;"><option value="kanban1">📦 Kanban 1 - Estación A</option><option value="kanban2">📦 Kanban 2 - Estación B</option><option value="kanban3">📦 Kanban 3 - Estación C</option></select></div><div class="form-group"><label>Ubicación</label><input type="text" id="materialUbicacion" placeholder="Ej: Kanban 1 - Gaveta A2" style="width:100%;"></div><div class="form-group"><label>Stock Actual *</label><input type="number" id="materialStockActual" value="0" min="0" style="width:100%;"></div><div class="form-group"><label>Stock Mínimo (Punto de pedido)</label><input type="number" id="materialStockMinimo" value="10" min="0" style="width:100%;"><small style="color:var(--text-tertiary);">Cuando baja de aquí, alerta amarilla</small></div><div class="form-group"><label>Stock Crítico</label><input type="number" id="materialStockCritico" value="5" min="0" style="width:100%;"><small style="color:var(--text-tertiary);">Cuando baja de aquí, alerta roja</small></div><div class="form-group"><label>Cantidad sugerida para pedir</label><input type="number" id="materialCantidadPedido" value="20" min="0" style="width:100%;"></div><div class="form-group"><label>Proveedor</label><input type="text" id="materialProveedor" placeholder="Ej: Suministros SL" style="width:100%;"></div><div class="form-group"><label>Referencia proveedor</label><input type="text" id="materialRefProveedor" placeholder="Referencia del proveedor" style="width:100%;"></div><div class="form-group"><label>Notas</label><textarea id="materialNotas" rows="2" placeholder="Observaciones..." style="width:100%;"></textarea></div></div><div class="action-buttons" style="margin-top:15px; display:flex; gap:10px;"><button class="btn btn-success" onclick="guardarMaterial()">💾 Guardar</button><button class="btn" onclick="cancelarFormMaterial()">❌ Cancelar</button></div></div>
+        </div>
+        <div class="admin-panel" id="panelVinculacion">
+            <h3 style="margin-bottom:20px;">🔗 Vincular Materiales Kanban a Montajes</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;"><div><div class="form-group"><label>📍 Seleccionar Estación</label><select id="vinculacionPunto" onchange="cargarMontajesVinculacion()" style="width:100%; padding:12px;"><option value="">Seleccionar...</option></select></div><div class="form-group"><label>📦 Seleccionar Montaje</label><select id="vinculacionMontaje" onchange="cargarMaterialesVinculados()" style="width:100%; padding:12px;"><option value="">Primero selecciona una estación</option></select></div><div class="form-group"><label>📦 Seleccionar Material Kanban</label><select id="vinculacionMaterial" style="width:100%; padding:12px;"><option value="">Seleccionar material...</option></select></div><div class="form-group"><label>🔢 Cantidad que consume</label><input type="number" id="vinculacionCantidad" value="1" min="1" style="width:100%; padding:12px;"></div><button class="btn btn-primary" onclick="vincularMaterial()" style="width:100%;">➕ Vincular Material al Montaje</button></div><div><h4>Materiales vinculados a este montaje</h4><div id="materialesVinculadosList" class="items-list" style="max-height:400px; overflow-y:auto;"><div class="empty-state">Selecciona un montaje</div></div></div></div>
+        </div>
+        <div class="admin-panel" id="panelHerramientas">
+            <h3 style="margin-bottom:20px;">🔧 Gestión de Herramientas</h3><div id="herramientasListContainer" style="margin-bottom:20px;"><div class="empty-state">Cargando herramientas...</div></div>
+            <div id="formHerramienta" style="display:none; background:var(--bg-elevated); padding:20px; border-radius:16px; margin-top:20px;"><h4 id="tituloFormHerramienta">➕ Nueva Herramienta</h4><input type="hidden" id="herramientaId"><div class="form-row"><div class="form-group"><label>Tipo</label><select id="herramientaTipo" style="width:100%; padding:12px;"><option value="Llave Dinamométrica">🔧 Llave Dinamométrica</option><option value="Destornillador">🪛 Destornillador</option><option value="Llave Fija">🔩 Llave Fija</option><option value="Llave Allen">⚙️ Llave Allen</option><option value="Torx">🔧 Torx</option><option value="Otro">📦 Otro</option></select></div><div class="form-group"><label>Nº de Serie</label><input type="text" id="herramientaSerie" placeholder="Ej: SN-2024-001"></div><div class="form-group"><label>Nº Simplificado</label><input type="text" id="herramientaNumSimplificado" placeholder="Ej: 1, 2, 3..."></div></div><div class="form-row"><div class="form-group"><label>Marca</label><input type="text" id="herramientaMarca" placeholder="Ej: Stahlwille"></div><div class="form-group"><label>Modelo</label><input type="text" id="herramientaModelo" placeholder="Ej: 730N/20"></div></div><div class="form-row"><div class="form-group"><label>Rango (Nm)</label><input type="text" id="herramientaRango" placeholder="Ej: 20-100 Nm"></div><div class="form-group"><label>Ubicación</label><input type="text" id="herramientaUbicacion" placeholder="Ej: Panel A1"></div></div><div class="form-row"><div class="form-group"><label>Fecha Calibración</label><input type="date" id="herramientaFechaCalibracion"></div><div class="form-group"><label>Próxima Calibración</label><input type="date" id="herramientaProximaCalibracion"></div></div><div class="form-group"><label>Estado</label><select id="herramientaEstado"><option value="disponible">✅ Disponible</option><option value="en_uso">🔴 En uso</option><option value="calibracion">⚠️ En calibración</option><option value="fuera_servicio">❌ Fuera de servicio</option></select></div><div class="action-buttons"><button class="btn btn-success" onclick="guardarHerramienta()">💾 Guardar</button><button class="btn" onclick="cancelarFormHerramienta()">❌ Cancelar</button></div></div>
+            <div style="display:flex; gap:10px; margin-top:20px;"><button class="btn btn-primary" onclick="mostrarFormNuevaHerramienta()" style="flex:1;">➕ Nueva Herramienta</button></div>
+        </div>
+        <div class="admin-panel" id="panelChecklist">
+            <div class="form-group"><label>📍 Seleccionar Estación</label><select id="selectorChecklistPunto" onchange="cargarMontajesChecklist()" style="width:100%; padding:12px; border-radius:10px;"><option value="">Seleccionar estación...</option></select></div>
+            <div class="form-group"><label>📦 Seleccionar Montaje</label><select id="selectorChecklistMontaje" onchange="cargarItemsChecklist()" style="width:100%; padding:12px; border-radius:10px;"><option value="">Primero selecciona una estación</option></select></div>
+            <div id="checklistAdminContainer" style="margin-top:20px;"><div class="empty-state">Selecciona un montaje para ver su checklist</div></div>
+            <div id="formChecklistAdmin" style="display:none; margin-top:20px; background:var(--bg-elevated); padding:20px; border-radius:16px;"><h4 style="margin:0 0 15px 0;" id="tituloFormChecklist">➕ Añadir Item</h4><input type="hidden" id="checklistItemId"><div class="form-group"><label>Descripción del item</label><input type="text" id="checklistItemTexto" placeholder="Ej: Verificar alineación" style="width:100%; padding:12px; border-radius:10px;"></div><div class="form-group"><label><input type="checkbox" id="checklistItemCompletado"> Marcado como completado</label></div><div class="action-buttons"><button class="btn btn-success" onclick="guardarItemChecklistAdmin()">💾 Guardar</button><button class="btn" onclick="cancelarFormChecklistAdmin()">❌ Cancelar</button></div></div>
+            <button class="btn btn-primary" id="btnAddChecklistItem" onclick="mostrarFormNuevoItem()" style="width:100%; margin-top:20px; display:none;">➕ Añadir Item al Checklist</button>
+        </div>
+        <div class="admin-panel" id="panelComentarios">
+            <h3 style="margin-bottom:20px;">💬 Gestión de Comentarios por Montaje</h3><div class="form-group"><label>📍 Seleccionar Estación</label><select id="selectorComentarioPunto" onchange="cargarMontajesComentario()" style="width:100%; padding:12px; border-radius:10px;"><option value="">Seleccionar estación...</option></select></div><div class="form-group"><label>📦 Seleccionar Montaje</label><select id="selectorComentarioMontaje" onchange="cargarComentariosAdmin()" style="width:100%; padding:12px; border-radius:10px;"><option value="">Primero selecciona una estación</option></select></div>
+            <div id="formComentarioAdmin" style="display:none; margin-top:20px; background:var(--bg-elevated); padding:20px; border-radius:16px;"><h4 style="margin:0 0 15px 0;" id="tituloFormComentario">💬 Nuevo Comentario</h4><input type="hidden" id="comentarioIdAdmin"><div class="form-group"><label>Tipo de comentario</label><select id="comentarioTipoAdmin" style="width:100%; padding:12px; border-radius:10px;"><option value="nota">📝 Nota</option><option value="advertencia">⚠️ Advertencia</option><option value="info">ℹ️ Información</option><option value="pregunta">❓ Pregunta</option></select></div><div class="form-group"><label>Comentario</label><textarea id="comentarioTextoAdmin" rows="3" placeholder="Escribe tu comentario aquí..." style="width:100%; padding:12px; border-radius:10px;"></textarea></div><div class="action-buttons" style="display:flex; gap:10px;"><button class="btn btn-success" onclick="guardarComentarioAdmin()">💾 Guardar</button><button class="btn" onclick="cancelarFormComentarioAdmin()">❌ Cancelar</button></div></div>
+            <div id="comentariosAdminContainer" style="margin-top:20px;"><div class="empty-state">Selecciona un montaje para ver sus comentarios</div></div>
+            <button class="btn btn-primary" id="btnAddComentario" onclick="mostrarFormNuevoComentario()" style="width:100%; margin-top:20px; display:none;">➕ Añadir Comentario</button>
+        </div>
+        <div class="admin-panel" id="panelOperarios">
+            <div class="grupo-card"><h3 style="margin-bottom:15px;">👥 Dashboard de Operarios</h3><p style="margin-bottom:15px; color:var(--text-tertiary); font-size:0.85rem;">Rendimiento y estadísticas por operario</p>
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;"><select id="filtroOperarioModelo" onchange="cargarDashboardOperarios()" style="padding:8px 12px; border-radius:8px;"><option value="todos">📊 Todos los modelos</option><option value="MS3">🔷 MS3</option><option value="DC3">🔶 DC3</option></select><select id="filtroOperarioFecha" onchange="cargarDashboardOperarios()" style="padding:8px 12px; border-radius:8px;"><option value="todas">📅 Todas las fechas</option><option value="hoy">📆 Hoy</option><option value="semana">📆 Última semana</option><option value="mes">📆 Último mes</option></select><button class="btn btn-primary" onclick="cargarDashboardOperarios()" style="padding:8px 16px;">🔄 Actualizar</button><button class="btn" onclick="sincronizarOperariosFirebase()" style="padding:8px 16px;">☁️ Sincronizar</button></div>
+            <div id="dashboardOperariosContainer"><div class="empty-state">Cargando datos...</div></div></div>
+        </div>
+        <div class="admin-panel" id="panelSolicitudes">
+    <div id="solicitudesList" class="items-list"></div>
+</div>
+    </div>
+</div>
+
+<!-- MODAL TORNILLERÍA -->
+<div class="modal-tornilleria" id="modalTornilleria"><div class="modal-tornilleria-content"><div class="modal-tornilleria-header"><h2>🔩 Inventario de Tornillería</h2><button class="modal-tornilleria-close" onclick="cerrarModalTornilleria()">×</button></div><div id="contenidoTornilleria" class="contenido-tornilleria"></div></div></div>
+
+<!-- MODAL TABLA -->
+<div class="modal-tabla" id="modalTabla"><div class="modal-tabla-content"><div class="modal-tabla-header"><h2>📊 Tabla de Operación</h2><button class="modal-tabla-close" onclick="cerrarModalTabla()">×</button></div><div class="modal-tabla-body" id="tablaOperacionContainer"></div></div></div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-detalle" id="modalDetalle"><div class="modal-detalle-content"><div class="modal-detalle-header"><h2 id="modalDetalleTitulo">📋 Detalle de Estación</h2><button class="modal-detalle-close" onclick="cerrarModalDetalle()">×</button></div><div class="modal-detalle-body" id="modalDetalleBody"></div></div></div>
+
+<!-- MODAL TQC -->
+<div class="modal" id="modalTQC"><div class="modal-content-fullscreen" style="padding:0;"><div class="modal-header-fullscreen" style="padding:15px 20px;"><h2>🔔 Avisos TQC Pendientes</h2><button class="close-modal" onclick="cerrarModalTQC()">×</button></div><div id="listaAvisosTQC" style="padding:20px;"></div></div></div>
+
+<!-- MODAL HISTORIAL -->
+<div class="modal-historial" id="modalHistorial"><div class="modal-historial-header"><h3>📜 Historial de Operaciones</h3><button class="timer-modal-close" onclick="cerrarHistorial()" style="background:none;border:none;font-size:1.8rem;cursor:pointer;color:var(--text-tertiary);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button></div><div class="modal-historial-body" id="historialBody"><div class="empty-state">Cargando...</div></div></div>
+
+<!-- MODAL ESTADO MONTAJES -->
+<div class="modal-historial" id="modalEstadoMontajes" style="z-index:5000;"><div class="modal-historial-header"><h3>📋 Estado de Montajes - Operación <span id="estadoOperacionNumero">-</span></h3><button class="timer-modal-close" onclick="cerrarModalEstadoMontajes()" style="background:none;border:none;font-size:1.8rem;cursor:pointer;">×</button></div><div class="modal-historial-body" id="estadoMontajesBody"><div class="empty-state">Cargando...</div></div></div>
+
+<!-- BADGE FLOTANTE CRONÓMETRO -->
+<div class="crono-badge-flotante" id="cronoBadgeFlotante" onclick="abrirModalDetalleDesdeBadge()"><span class="icono">⏱️</span><span class="tiempo" id="cronoBadgeTiempo">00:00:00</span><span class="montaje-nombre" id="cronoBadgeMontaje">-</span></div>
+
+<!-- BADGE GLOBAL TIEMPO TOTAL -->
+<div class="global-time-badge" id="globalTimeBadge" style="display:none;"><div class="global-time-stats"><div class="stat-block"><div class="label">⏱️ TIEMPO RESTANTE</div><div class="value" id="tiempoRestanteGlobal">00:00:00</div></div><div class="stat-block"><div class="label">📊 CONSUMIDO</div><div class="value" id="tiempoConsumidoGlobal">00:00:00</div></div><div class="stat-block"><div class="label">📦 MONTAJES</div><div class="value" id="montajesEstadoGlobal">0<span style="font-size:0.8rem;">/0</span></div></div></div><div class="progress-bar-container"><div class="progress-fill" id="progressFillGlobal"></div></div><div class="montajes-pendientes" id="montajesPendientesInfo"><span>⏳ Pendientes: 0 | ▶️ En curso: 0 | ✅ Completados: 0</span></div></div>
+
+
+<!-- Firebase SDKs - Versión 8 (la más compatible) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Escáner QR real -->
+<!-- Escáner QR moderno (Html5Qrcode) -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><!-- SCRIPT -->
+<script>
+
+document.getElementById('testCamaraBtn').onclick = async function() {
+    // Crear un div para el lector
+    const readerDiv = document.createElement('div');
+    readerDiv.id = 'tempReader';
+    readerDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:100000;';
+    document.body.appendChild(readerDiv);
+    
+    const html5QrCode = new Html5Qrcode('tempReader');
+    try {
+        await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: 250 },
+            (decodedText) => {
+                alert('Código escaneado: ' + decodedText);
+                html5QrCode.stop();
+                readerDiv.remove();
+            },
+            (err) => console.log(err)
+        );
+    } catch(err) {
+        alert('Error al iniciar cámara: ' + err);
+        readerDiv.remove();
+    }
+};
+
+// ==============================================
+// 1. VARIABLES GLOBALES Y CONSTANTES
+// ==============================================
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCk4CrThg7vq0xq90TSZQRhDCkPGgrm8bI",
+    authDomain: "linea-traxx.firebaseapp.com",
+    projectId: "linea-traxx",
+    storageBucket: "linea-traxx.firebasestorage.app",
+    messagingSenderId: "658250993876",
+    appId: "1:658250993876:web:eed181a102dfd1665a6b41"
+};
+
+window.db = null;
+window.isOnline = navigator.onLine;
+window.pendingSync = [];
+
+
+// Añade esto al principio de tu script, donde están las otras variables
+let escaneoActivo = false;
+let html5ScannerGlobal = null;
+// ==============================================
+// 2. INICIALIZACIÓN DE FIREBASE
+// ==============================================
+
+function inicializarFirebase() {
+    if (window.db) {
+        console.log('Firebase ya inicializado');
+        return window.db;
+    }
+    try {
+        firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore();
+        console.log('✅ Firebase inicializado');
+        return window.db;
+    } catch (error) {
+        console.error('Error inicializando Firebase:', error);
+        return null;
+    }
+}
+
+// ==============================================
+// 3. GESTIÓN DE LOCALSTORAGE
+// ==============================================
+
+function guardarLocal(coleccion, id, data) {
+    const key = `traxx_${coleccion}`;
+    const items = JSON.parse(localStorage.getItem(key) || '{}');
+    items[id] = data;
+    localStorage.setItem(key, JSON.stringify(items));
+}
+
+function obtenerLocal(coleccion, id = null) {
+    const key = `traxx_${coleccion}`;
+    const items = JSON.parse(localStorage.getItem(key) || '{}');
+    if (id) return items[id] || null;
+    return items;
+}
+
+function eliminarLocal(coleccion, id) {
+    const key = `traxx_${coleccion}`;
+    const items = JSON.parse(localStorage.getItem(key) || '{}');
+    delete items[id];
+    localStorage.setItem(key, JSON.stringify(items));
+}
+
+// ==============================================
+// 4. GESTIÓN DE FIREBASE (CON ONLINE/OFFLINE)
+// ==============================================
+
+async function guardarFirebase(coleccion, id, data) {
+    const db = window.db;
+    
+    console.log(`🔍 Guardando en ${coleccion}/${id} - Online: ${window.isOnline}`);
+    
+    // Si no hay Firebase (no inicializado)
+    if (!db) {
+        console.log(`📴 Firebase no inicializado - Guardando solo local: ${coleccion}/${id}`);
+        guardarLocal(coleccion, id, data);
+        window.pendingSync.push({ tipo: 'guardar', coleccion, id, data });
+        console.log(`📝 Cola pendientes: ${window.pendingSync.length} operaciones`);
+        return false;
+    }
+    
+    // Si está offline
+    if (!window.isOnline) {
+        console.log(`📴 Modo OFFLINE - Guardando localmente: ${coleccion}/${id}`);
+        guardarLocal(coleccion, id, data);
+        window.pendingSync.push({ tipo: 'guardar', coleccion, id, data });
+        console.log(`📝 Cola pendientes: ${window.pendingSync.length} operaciones`);
+        return false;
+    }
+    
+    // Si está online
+    try {
+        console.log(`☁️ Modo ONLINE - Guardando en Firebase: ${coleccion}/${id}`);
+        await db.collection(coleccion).doc(id).set(data, { merge: true });
+        guardarLocal(coleccion, id, data);
+        console.log(`✅ Guardado exitoso en Firebase: ${coleccion}/${id}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error guardando en Firebase:', error);
+        window.pendingSync.push({ tipo: 'guardar', coleccion, id, data });
+        guardarLocal(coleccion, id, data);
+        console.log(`📝 Cola pendientes: ${window.pendingSync.length} operaciones`);
+        return false;
+    }
+}
+
+async function eliminarFirebase(coleccion, id) {
+    const db = window.db;
+    if (!db) return eliminarLocal(coleccion, id);
+    
+    if (!window.isOnline) {
+        window.pendingSync.push({ tipo: 'eliminar', coleccion, id });
+        eliminarLocal(coleccion, id);
+        return false;
+    }
+    try {
+        await db.collection(coleccion).doc(id).delete();
+        eliminarLocal(coleccion, id);
+        console.log(`🗑️ Eliminado de Firebase: ${coleccion}/${id}`);
+        return true;
+    } catch (error) {
+        console.error('Error eliminando en Firebase:', error);
+        window.pendingSync.push({ tipo: 'eliminar', coleccion, id });
+        return false;
+    }
+}
+
+async function cargarDatosFirebase(coleccion) {
+    const local = obtenerLocal(coleccion);
+    const db = window.db;
+    if (!db || !window.isOnline) return local;
+    try {
+        const snapshot = await db.collection(coleccion).get();
+        const firebaseData = {};
+        snapshot.forEach(doc => { firebaseData[doc.id] = doc.data(); });
+        const combinado = { ...local, ...firebaseData };
+        localStorage.setItem(`traxx_${coleccion}`, JSON.stringify(combinado));
+        return combinado;
+    } catch (error) {
+        console.error('Error cargando desde Firebase:', error);
+        return local;
+    }
+}
+
+// ==============================================
+// 5. GESTIÓN DE COLA DE SINCRONIZACIÓN
+// ==============================================
+
+async function procesarPendientes() {
+    if (!window.isOnline || window.pendingSync.length === 0) return;
+    console.log(`🔄 Procesando ${window.pendingSync.length} operaciones pendientes...`);
+    const copia = [...window.pendingSync];
+    window.pendingSync = [];
+    for (const op of copia) {
+        if (op.tipo === 'guardar') await guardarFirebase(op.coleccion, op.id, op.data);
+        else if (op.tipo === 'eliminar') await eliminarFirebase(op.coleccion, op.id);
+    }
+}
+
+// ==============================================
+// 6. EVENTOS DE CONEXIÓN
+// ==============================================
+
+function initConnectionListeners() {
+    window.addEventListener('online', () => {
+        window.isOnline = true;
+        console.log('📶 Conexión recuperada');
+        procesarPendientes();
+    });
+    window.addEventListener('offline', () => {
+        window.isOnline = false;
+        console.log('⚠️ Sin conexión - modo offline');
+    });
+}
+
+
+// ==============================================
+// ESCANEO CON CÁMARA - FUNCIÓN GLOBAL DEFINITIVA
+// ==============================================
+
+window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
+    console.log('🔍 Escáner llamado', estacionId, materialIndex);
+    
+    // Obtener material actualizado
+    const data = await cargarDatosFirebase('materiales_entregados');
+    const materiales = data[estacionId]?.materiales || [];
+    const material = materiales[materialIndex];
+    
+    if (!material?.requiereEscaneo) {
+        alert('Este material no requiere escaneo');
+        return;
+    }
+    
+    let codigosEscaneados = material.serialNumbers || [];
+    let cantidadRequerida = material.cantidadEscaneosRequeridos || 0;
+    let pendientes = cantidadRequerida - codigosEscaneados.length;
+    
+    if (pendientes <= 0) {
+        alert('✅ Todos los escaneos ya fueron completados');
+        return;
+    }
+    
+    // Crear contenedor del escáner (mismo código que funcionó en el paso 2)
+    const readerDiv = document.createElement('div');
+    readerDiv.id = 'qrReader_' + Date.now();
+    readerDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:200000;';
+    document.body.appendChild(readerDiv);
+    
+    const html5QrCode = new Html5Qrcode(readerDiv.id);
+    
+    const procesarEscaneo = async (decodedText) => {
+        const codigoLimpio = limpiarCodigoEscaneado(decodedText);
+        if (!codigoLimpio) {
+            alert('❌ Código no válido');
+            return;
+        }
+        if (codigosEscaneados.includes(codigoLimpio)) {
+            alert(`⚠️ Código ya escaneado: ${codigoLimpio}`);
+            return;
+        }
+        
+        codigosEscaneados.push(codigoLimpio);
+        if (!material.fechasEscaneo) material.fechasEscaneo = [];
+        material.fechasEscaneo.push(new Date().toISOString());
+        
+        material.serialNumbers = codigosEscaneados;
+        material.escaneoCompletado = codigosEscaneados.length >= cantidadRequerida;
+        
+        if (material.escaneoCompletado && material.cantidadEntregada >= material.cantidadNecesaria) {
+            material.verificado = true;
+            material.verificadoFecha = new Date().toLocaleString();
+        }
+        
+        // Guardar en Firebase
+        const dataActual = await cargarDatosFirebase('materiales_entregados');
+        const estacionDataActual = dataActual[estacionId] || { materiales: [] };
+        let matActual = estacionDataActual.materiales || [];
+        matActual[materialIndex] = material;
+        await guardarFirebase('materiales_entregados', estacionId, {
+            materiales: matActual,
+            ultimaActualizacion: new Date().toISOString()
+        });
+        
+        const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
+        
+        if (nuevosPendientes === 0) {
+            alert(`✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`);
+            await html5QrCode.stop();
+            readerDiv.remove();
+            cargarMaterialesEstacionSeleccionada();
+            renderizarEstacionesArmario();
+        } else {
+            alert(`✅ Registrado: ${codigoLimpio}\n📊 Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`);
+            // El escáner sigue activo, no lo detenemos
+        }
+    };
+    
+    try {
+        await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: 250 },
+            procesarEscaneo,
+            (error) => console.log('Error de escaneo:', error)
+        );
+        
+        // Botón para cerrar manualmente
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '❌ Cerrar escáner';
+        closeBtn.style.cssText = 'position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#f44336; color:white; border:none; border-radius:30px; padding:10px 20px; font-size:16px; z-index:200001; cursor:pointer;';
+        closeBtn.onclick = () => {
+            html5QrCode.stop();
+            readerDiv.remove();
+        };
+        readerDiv.appendChild(closeBtn);
+    } catch (err) {
+        alert('Error al iniciar cámara: ' + err.message);
+        readerDiv.remove();
+    }
+};
+
+// Verificar que la función está disponible
+console.log('✅ función abrirEscaneoMaterial definida:', typeof window.abrirEscaneoMaterial);
+
+
+// ==============================================
+// INDICADOR VISUAL DE CONEXIÓN
+// ==============================================
+
+function actualizarIndicadorConexion() {
+    const indicator = document.getElementById('connectionIndicator');
+    const textSpan = document.getElementById('connectionText');
+    
+    if (!indicator) return;
+    
+    if (window.isOnline === undefined) {
+        indicator.className = 'connection-indicator checking';
+        if (textSpan) textSpan.textContent = '🔄 Conectando...';
+    } else if (window.isOnline) {
+        indicator.className = 'connection-indicator online';
+        if (textSpan) textSpan.textContent = '☁️ Online';
+        // Ocultar después de 3 segundos si está online
+        setTimeout(() => {
+            if (indicator && window.isOnline) {
+                indicator.style.opacity = '0.7';
+            }
+        }, 3000);
+    } else {
+        indicator.className = 'connection-indicator offline';
+        if (textSpan) textSpan.textContent = '📴 Offline';
+        indicator.style.opacity = '1';
+    }
+}
+
+// Modificar initConnectionListeners para actualizar el indicador
+function initConnectionListeners() {
+    // Estado inicial
+    window.isOnline = navigator.onLine;
+    actualizarIndicadorConexion();
+    
+    window.addEventListener('online', () => {
+        window.isOnline = true;
+        console.log('📶 Conexión recuperada');
+        actualizarIndicadorConexion();
+        procesarPendientes();
+        
+        // Mostrar notificación opcional
+        setTimeout(() => {
+            const indicator = document.getElementById('connectionIndicator');
+            if (indicator) indicator.style.opacity = '0.7';
+        }, 3000);
+    });
+    
+    window.addEventListener('offline', () => {
+        window.isOnline = false;
+        console.log('⚠️ Sin conexión - modo offline');
+        actualizarIndicadorConexion();
+        
+        // Asegurar que se vea claramente
+        const indicator = document.getElementById('connectionIndicator');
+        if (indicator) indicator.style.opacity = '1';
+    });
+}
+
+// También actualizar cuando se complete la sincronización
+async function procesarPendientes() {
+    if (!window.isOnline || window.pendingSync.length === 0) return;
+    console.log(`🔄 Procesando ${window.pendingSync.length} operaciones pendientes...`);
+    
+    // Cambiar indicador a "sincronizando"
+    const indicator = document.getElementById('connectionIndicator');
+    const textSpan = document.getElementById('connectionText');
+    if (indicator) {
+        indicator.className = 'connection-indicator checking';
+        if (textSpan) textSpan.textContent = '🔄 Sincronizando...';
+    }
+    
+    const copia = [...window.pendingSync];
+    window.pendingSync = [];
+    for (const op of copia) {
+        if (op.tipo === 'guardar') await guardarFirebase(op.coleccion, op.id, op.data);
+        else if (op.tipo === 'eliminar') await eliminarFirebase(op.coleccion, op.id);
+    }
+    
+    // Volver a estado online
+    actualizarIndicadorConexion();
+}
+
+// ==============================================
+// 7. RENDERIZADO DE ESTACIONES EN EL ARMARIO
+// ==============================================
+
+async function renderizarEstacionesArmario() {
+    const container = document.getElementById('puntosContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const modeloSelector = document.getElementById('modeloSelector');
+    const modeloActual = modeloSelector ? modeloSelector.value : 'MS3';
+    const estaciones = await cargarDatosFirebase('estaciones');
+    const montajes = await cargarDatosFirebase('montajes');
+    const materialesData = await cargarDatosFirebase('materiales_entregados');
+    
+    if (!estaciones || Object.keys(estaciones).length === 0) {
+        console.log('No hay estaciones para mostrar');
+        return;
+    }
+    
+    const estacionesFiltradas = Object.entries(estaciones).filter(([id, estacion]) => estacion.modelo === modeloActual);
+    
+    for (const [id, estacion] of estacionesFiltradas) {
+        const numMontajes = Object.values(montajes).filter(m => m.puntoId === id).length;
+        
+        // Contar materiales NO verificados (incompletos pendientes de verificar)
+        const estacionMateriales = materialesData[id];
+        const materiales = estacionMateriales?.materiales || [];
+        // IMPORTANTE: Contar los que están incompletos Y NO verificados
+        const materialesPendientes = materiales.filter(m => m.estado === 'incompleto' && !m.verificado).length;
+        const tieneAlerta = materialesPendientes > 0;
+        
+        const div = document.createElement('div');
+        div.className = 'interactive-point';
+        div.style.left = `${estacion.posX || 200}px`;
+        div.style.top = `${estacion.posY || 150}px`;
+        div.style.cursor = 'pointer';
+        div.style.position = 'absolute';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.justifyContent = 'center';
+        div.style.backgroundColor = 'var(--accent)';
+        div.style.border = '3px solid var(--bg-card)';
+        div.style.borderRadius = '8px';
+        div.style.minWidth = '80px';
+        div.style.height = '38px';
+        div.style.padding = '0 12px';
+        div.style.fontWeight = '600';
+        div.style.fontSize = '0.85rem';
+        div.style.color = 'var(--text-primary)';
+        div.style.whiteSpace = 'nowrap';
+        div.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,.1)';
+        
+        // Badge de montajes (azul)
+        let badgeMontajes = `<span style="position:absolute; top:-8px; right:-8px; background:var(--primary); color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; border:2px solid var(--bg-card);">${numMontajes}</span>`;
+        
+        // Badge de materiales pendientes (rojo)
+        let badgeMateriales = '';
+        if (tieneAlerta) {
+            badgeMateriales = `<span style="position:absolute; top:-8px; left:-8px; background:#f44336; color:white; border-radius:50%; min-width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; border:2px solid var(--bg-card); padding:0 4px;">⚠️${materialesPendientes}</span>`;
+        }
+        
+        div.innerHTML = `
+            <span>${estacion.nombre || 'Estación'}</span>
+            ${badgeMontajes}
+            ${badgeMateriales}
+        `;
+        
+        div.onclick = () => seleccionarEstacion(id, estacion.nombre);
+        container.appendChild(div);
+    }
+    console.log(`✅ Renderizadas ${estacionesFiltradas.length} estaciones en el armario`);
+}
+
+// ==============================================
+// 8. SELECCIÓN DE ESTACIÓN
+// ==============================================
+
+async function seleccionarEstacion(estacionId, estacionNombre) {
+    window.currentEstacionId = estacionId;
+    
+    document.getElementById('selectedPointName').textContent = estacionNombre || 'Estación';
+    document.getElementById('selectedPointDesc').textContent = 'Selecciona un montaje para ver sus instrucciones';
+    document.getElementById('selectedPointIcon').textContent = '📍';
+    document.getElementById('sectionDisplay').classList.add('hidden');
+    document.getElementById('sectionDetail').classList.add('active');
+    
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.getElementById('navDisplay').classList.add('active');
+    
+    // Cargar montajes (por si cambia de pestaña manualmente)
+    cargarMontajesDeEstacion(estacionId);
+    
+    // SIEMPRE abrir la pestaña Materiales
+    console.log('📦 Abriendo pestaña Materiales');
+    showPartsTab();
+}
+
+async function cargarMontajesDeEstacion(estacionId) {
+    const container = document.getElementById('assembliesContainer');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="empty-state">⏳ Cargando información...</div>';
+    
+    try {
+        // Cargar materiales de la estación
+        const materialesData = await cargarDatosFirebase('materiales_entregados');
+        const estacionMateriales = materialesData[estacionId];
+        const materiales = estacionMateriales?.materiales || [];
+        
+        const materialesIncompletos = materiales.filter(m => m.estado === 'incompleto');
+        const tieneIncompletos = materialesIncompletos.length > 0;
+        
+        // HTML de materiales
+        let materialesHTML = '';
+        if (materiales.length > 0) {
+            materialesHTML = `
+                <div style="background:var(--bg-card); border-radius:16px; padding:16px; margin-bottom:20px; border:1px solid var(--border);">
+                    <h3 style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                        📦 Materiales de la estación
+                        ${tieneIncompletos ? '<span style="background:#f44336; color:white; padding:2px 10px; border-radius:20px; font-size:0.7rem;">Faltan materiales</span>' : '<span style="background:#4caf50; color:white; padding:2px 10px; border-radius:20px; font-size:0.7rem;">Todo completo ✅</span>'}
+                    </h3>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${materiales.map(m => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-elevated); border-radius:12px; border-left:4px solid ${m.estado === 'completo' ? '#4caf50' : '#f44336'};">
+                                <div>
+                                    <strong>${m.nombre}</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-tertiary);">Necesario: ${m.cantidadNecesaria} uds</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span style="font-size:1.1rem; font-weight:bold; ${m.estado === 'completo' ? 'color:#4caf50' : 'color:#f44336'}">
+                                        ${m.cantidadEntregada} / ${m.cantidadNecesaria}
+                                    </span>
+                                    ${m.estado === 'incompleto' ? `<div style="font-size:0.7rem; color:#f44336;">Faltan ${m.cantidadNecesaria - m.cantidadEntregada} uds</div>` : '<div style="font-size:0.7rem; color:#4caf50;">✅ Completo</div>'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${tieneIncompletos ? '<div style="margin-top:12px; padding:10px; background:#ffebee; border-radius:12px; color:#c62828; font-size:0.85rem;">⚠️ Antes de comenzar, consulta con almacén los materiales faltantes.</div>' : ''}
+                </div>
+            `;
+        }
+        
+        // Cargar montajes
+        const montajes = await cargarDatosFirebase('montajes');
+        const montajesFiltrados = Object.entries(montajes).filter(([id, montaje]) => montaje.puntoId === estacionId);
+        
+        let montajesHTML = '';
+        if (montajesFiltrados.length > 0) {
+            montajesHTML = `
+                <h3 style="margin-bottom:12px;">📋 Montajes disponibles</h3>
+                <div class="assemblies-list">
+                    ${montajesFiltrados.map(([id, montaje]) => `
+                        <div class="assembly-card" onclick="seleccionarMontaje('${id}')">
+                            <div class="assembly-header">
+                                <div class="assembly-icon">${montaje.icono || '📦'}</div>
+                                <div class="assembly-title">
+                                    <h3>${montaje.nombre || 'Sin nombre'}</h3>
+                                    <span>${montaje.tipo || ''}</span>
+                                </div>
+                            </div>
+                            <div class="assembly-preview">
+                                <div class="preview-item">
+                                    <div class="preview-value">${montaje.tiempoHoras || 0}h</div>
+                                    <div class="preview-label">Tiempo estimado</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            montajesHTML = '<div class="empty-state">📦 No hay montajes para esta estación</div>';
+        }
+        
+        container.innerHTML = materialesHTML + montajesHTML;
+        
+    } catch (error) {
+        console.error('Error cargando datos:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar la información</div>';
+    }
+}
+
+function seleccionarMontaje(montajeId) {
+    console.log('Montaje seleccionado:', montajeId);
+    // Aquí luego mostraremos el detalle del montaje
+}
+
+function goToDisplay() {
+    document.getElementById('sectionDetail').classList.remove('active');
+    document.getElementById('sectionDisplay').classList.remove('hidden');
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.getElementById('navDisplay').classList.add('active');
+}
+
+function cambiarModelo() { renderizarEstacionesArmario(); }
+
+// ==============================================
+// 9. ADMIN - GESTIÓN DE ESTACIONES
+// ==============================================
+
+let estacionesData = {};
+let currentEstacionId = null;
+
+async function cargarListaEstacionesAdmin() {
+    const container = document.getElementById('puntosList');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state">⏳ Cargando estaciones...</div>';
+    
+    try {
+        const data = await cargarDatosFirebase('estaciones');
+        estacionesData = data;
+        
+        // Obtener filtro de modelo
+        const modeloSelector = document.getElementById('selectorModeloEstaciones');
+        const filtroModelo = modeloSelector ? modeloSelector.value : 'todos';
+        
+        // Filtrar por modelo si no es "todos"
+        let estacionesFiltradas = Object.entries(estacionesData);
+        if (filtroModelo !== 'todos') {
+            estacionesFiltradas = estacionesFiltradas.filter(([id, estacion]) => estacion.modelo === filtroModelo);
+        }
+        
+        // Cargar montajes para contar
+        const montajes = await cargarDatosFirebase('montajes');
+        
+        if (estacionesFiltradas.length === 0) {
+            container.innerHTML = '<div class="empty-state">📭 No hay estaciones para este modelo. Presiona "+ Nueva Estación" para crear una.</div>';
+            return;
+        }
+        
+        // Ordenar estaciones
+        estacionesFiltradas.sort((a, b) => {
+            const [idA, estacionA] = a;
+            const [idB, estacionB] = b;
+            
+            if (estacionA.modelo !== estacionB.modelo) {
+                return estacionA.modelo === 'MS3' ? -1 : 1;
+            }
+            
+            const numA = parseInt(estacionA.nombre?.match(/\d+/)?.[0]) || 0;
+            const numB = parseInt(estacionB.nombre?.match(/\d+/)?.[0]) || 0;
+            return numA - numB;
+        });
+        
+        container.innerHTML = '';
+        for (const [id, estacion] of estacionesFiltradas) {
+            const numMontajes = Object.values(montajes).filter(m => m.puntoId === id).length;
+            
+            const div = document.createElement('div');
+            div.className = `list-item ${currentEstacionId === id ? 'selected' : ''}`;
+            div.innerHTML = `
+                <div class="list-item-title">📍 ${estacion.nombre || 'Sin nombre'}</div>
+                <div class="list-item-sub">
+                    ${estacion.descripcion || 'Sin descripción'} | Modelo: ${estacion.modelo || 'MS3'}
+                    <span style="display:inline-block; margin-left:10px; background:var(--primary); color:white; padding:2px 8px; border-radius:12px; font-size:0.7rem;">
+                        📦 ${numMontajes} montaje${numMontajes !== 1 ? 's' : ''}
+                    </span>
+                </div>
+            `;
+            div.onclick = () => seleccionarEstacionAdmin(id);
+            container.appendChild(div);
+        }
+    } catch (error) {
+        console.error('Error cargando estaciones:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar estaciones</div>';
+    }
+}
+
+function seleccionarEstacionAdmin(id) {
+    currentEstacionId = id;
+    cargarListaEstacionesAdmin();
+    const estacion = estacionesData[id];
+    if (!estacion) return;
+    
+    const form = document.getElementById('editEstacionFormAdmin');
+    if (form) {
+        form.style.display = 'block';
+        document.getElementById('editEstacionIdAdmin').value = id;
+        document.getElementById('editEstacionNombreAdmin').value = estacion.nombre || '';
+        document.getElementById('editEstacionDescripcionAdmin').value = estacion.descripcion || '';
+        document.getElementById('editEstacionModeloAdmin').value = estacion.modelo || 'MS3';
+        document.getElementById('editEstacionPosXAdmin').value = estacion.posX || '';
+        document.getElementById('editEstacionPosYAdmin').value = estacion.posY || '';
+    }
+}
+
+function mostrarFormNuevaEstacionAdmin() {
+    currentEstacionId = null;
+    cargarListaEstacionesAdmin();
+    const form = document.getElementById('editEstacionFormAdmin');
+    if (form) {
+        form.style.display = 'block';
+        document.getElementById('editEstacionIdAdmin').value = '';
+        document.getElementById('editEstacionNombreAdmin').value = '';
+        document.getElementById('editEstacionDescripcionAdmin').value = '';
+        document.getElementById('editEstacionModeloAdmin').value = 'MS3';
+        document.getElementById('editEstacionPosXAdmin').value = '';
+        document.getElementById('editEstacionPosYAdmin').value = '';
+    }
+}
+
+async function guardarEstacionAdmin() {
+    const id = document.getElementById('editEstacionIdAdmin').value;
+    let nombre = document.getElementById('editEstacionNombreAdmin').value.trim();
+    const descripcion = document.getElementById('editEstacionDescripcionAdmin').value.trim();
+    const modelo = document.getElementById('editEstacionModeloAdmin').value;
+    const posX = parseInt(document.getElementById('editEstacionPosXAdmin').value) || 200;
+    const posY = parseInt(document.getElementById('editEstacionPosYAdmin').value) || 150;
+    
+    if (!nombre) { 
+        alert('El nombre es obligatorio'); 
+        return; 
+    }
+    
+    let estacionId = id;
+    
+    if (!estacionId) {
+        // Obtener el número de la estación del nombre (Ej: "Estación 0" -> 0)
+        let numero = 0;
+        const match = nombre.match(/\d+/);
+        if (match) numero = parseInt(match[0]);
+        
+        // ID único que incluye el modelo y el número
+        estacionId = `${modelo.toLowerCase()}_estacion_${numero}`;
+        console.log(`🆔 ID generado: ${estacionId}`);
+        
+        // Verificar si ya existe una estación con este ID
+        const estacionesExistentes = await cargarDatosFirebase('estaciones');
+        if (estacionesExistentes[estacionId]) {
+            alert(`⚠️ Ya existe una estación con el nombre "${nombre}" en el modelo ${modelo}.\n\nUsa un nombre diferente (Ej: "Estación 6", "Estación 7", etc.)`);
+            return;
+        }
+    }
+    
+    const estacionData = { 
+        nombre: nombre, 
+        descripcion: descripcion, 
+        modelo: modelo, 
+        posX: posX, 
+        posY: posY, 
+        updatedAt: new Date().toISOString() 
+    };
+    
+    if (!id) {
+        estacionData.createdAt = new Date().toISOString();
+    }
+    
+    await guardarFirebase('estaciones', estacionId, estacionData);
+    
+    document.getElementById('saveIndicator')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('saveIndicator')?.classList.add('hidden'), 1500);
+    
+    await cargarListaEstacionesAdmin();
+    await renderizarEstacionesArmario();
+    
+    const form = document.getElementById('editEstacionFormAdmin');
+    if (form) form.style.display = 'none';
+    currentEstacionId = null;
+    
+    if (!id) {
+        document.getElementById('editEstacionNombreAdmin').value = '';
+        document.getElementById('editEstacionDescripcionAdmin').value = '';
+        document.getElementById('editEstacionPosXAdmin').value = '';
+        document.getElementById('editEstacionPosYAdmin').value = '';
+    }
+    
+    console.log(`✅ Estación guardada: ${estacionId}`);
+}
+
+async function eliminarEstacionAdmin() {
+    if (!currentEstacionId) { alert('Selecciona una estación primero'); return; }
+    if (!confirm('¿Eliminar esta estación permanentemente?')) return;
+    
+    await eliminarFirebase('estaciones', currentEstacionId);
+    currentEstacionId = null;
+    const form = document.getElementById('editEstacionFormAdmin');
+    if (form) form.style.display = 'none';
+    await cargarListaEstacionesAdmin();
+    await renderizarEstacionesArmario();
+    document.getElementById('saveIndicator')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('saveIndicator')?.classList.add('hidden'), 1500);
+}
+
+async function inicializarPanelEstacionesAdmin() {
+    let editForm = document.getElementById('editEstacionFormAdmin');
+    
+    // Crear selector de modelo si no existe
+    let modeloSelector = document.getElementById('selectorModeloEstaciones');
+    if (!modeloSelector) {
+        const panel = document.getElementById('panelPuntos');
+        if (panel && !document.getElementById('selectorModeloEstaciones')) {
+            const selectorHTML = `
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label>📦 Filtrar por Modelo</label>
+                    <select id="selectorModeloEstaciones" style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border);">
+                        <option value="todos">🔷🔶 Todos los modelos</option>
+                        <option value="MS3">🔷 MS3</option>
+                        <option value="DC3">🔶 DC3</option>
+                    </select>
+                </div>
+            `;
+            panel.insertAdjacentHTML('afterbegin', selectorHTML);
+            modeloSelector = document.getElementById('selectorModeloEstaciones');
+            modeloSelector.addEventListener('change', () => {
+                cargarListaEstacionesAdmin();
+                // Ocultar formulario al cambiar filtro
+                const form = document.getElementById('editEstacionFormAdmin');
+                if (form) form.style.display = 'none';
+                currentEstacionId = null;
+            });
+        }
+    }
+    
+    if (!editForm) {
+        const panel = document.getElementById('panelPuntos');
+        if (panel && !document.getElementById('editEstacionFormAdmin')) {
+            const formHTML = `
+                <div id="editEstacionFormAdmin" style="display:none; margin-top:20px; background:var(--bg-elevated); padding:20px; border-radius:16px;">
+                    <h4>✏️ Editar Estación</h4>
+                    <input type="hidden" id="editEstacionIdAdmin">
+                    <div class="form-group"><label>📍 Nombre *</label><input type="text" id="editEstacionNombreAdmin" placeholder="Ej: Estación Central" style="width:100%; padding:12px; border-radius:10px;"></div>
+                    <div class="form-group"><label>📝 Descripción</label><input type="text" id="editEstacionDescripcionAdmin" placeholder="Ej: Zona de montaje principal" style="width:100%; padding:12px; border-radius:10px;"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>📦 Modelo</label><select id="editEstacionModeloAdmin"><option value="MS3">MS3</option><option value="DC3">DC3</option></select></div>
+                        <div class="form-group"><label>📍 Posición X</label><input type="number" id="editEstacionPosXAdmin" placeholder="Ej: 200"></div>
+                        <div class="form-group"><label>📍 Posición Y</label><input type="number" id="editEstacionPosYAdmin" placeholder="Ej: 150"></div>
+                    </div>
+                    <div class="action-buttons" style="margin-top:15px; display:flex; gap:10px;">
+                        <button class="btn btn-success" onclick="guardarEstacionAdmin()">💾 Guardar</button>
+                        <button class="btn btn-danger" onclick="eliminarEstacionAdmin()">🗑️ Eliminar</button>
+                     </div>
+                </div>
+                <button class="btn btn-primary" onclick="mostrarFormNuevaEstacionAdmin()" style="width:100%; margin-top:15px;">➕ Nueva Estación</button>
+            `;
+            panel.insertAdjacentHTML('beforeend', formHTML);
+        }
+    }
+    
+    await cargarListaEstacionesAdmin();
+}
+
+// ==============================================
+// 10. ADMIN - NAVEGACIÓN
+// ==============================================
+
+function switchAdminTab(tab, event) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    if (event?.currentTarget) event.currentTarget.classList.add('active');
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    const panelActivo = document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+    if (panelActivo) panelActivo.classList.add('active');
+    
+    // Inicializar cada panel según la pestaña
+    if (tab === 'puntos') {
+        inicializarPanelEstacionesAdmin();
+    } else if (tab === 'montajes') {
+        inicializarPanelMontajes();
+    } else if (tab === 'tornillos') {
+        if (typeof inicializarPanelTornillos === 'function') inicializarPanelTornillos();
+    } else if (tab === 'piezas') {
+        if (typeof inicializarPanelPiezas === 'function') inicializarPanelPiezas();
+} else if (tab === 'materiales') {
+    inicializarPanelMateriales();
+} else if (tab === 'checklist') {
+        if (typeof inicializarPanelChecklist === 'function') inicializarPanelChecklist();
+    } else if (tab === 'comentarios') {
+        if (typeof inicializarPanelComentarios === 'function') inicializarPanelComentarios();
+    } else if (tab === 'herramientas') {
+        if (typeof inicializarPanelHerramientas === 'function') inicializarPanelHerramientas();
+    } else if (tab === 'operaciones') {
+        if (typeof inicializarPanelOperaciones === 'function') inicializarPanelOperaciones();
+    } else if (tab === 'operarios') {
+        if (typeof inicializarPanelOperarios === 'function') inicializarPanelOperarios();
+    } else if (tab === 'gestionOperarios') {
+        if (typeof inicializarPanelGestionOperarios === 'function') inicializarPanelGestionOperarios();
+    } else if (tab === 'registros') {
+        if (typeof inicializarPanelRegistros === 'function') inicializarPanelRegistros();
+    } else if (tab === 'vinculacion') {
+        if (typeof inicializarPanelVinculacion === 'function') inicializarPanelVinculacion();
+    } else if (tab === 'alertas') {
+        if (typeof inicializarPanelAlertas === 'function') inicializarPanelAlertas();
+    } else if (tab === 'solicitudes') {
+    inicializarPanelSolicitudes();
+} else if (tab === 'registroEscaneos') {
+    inicializarPanelRegistroEscaneos();
+}
+    
+}
+
+function openAdminModal() {
+    document.getElementById('adminModal')?.classList.add('active');
+    switchAdminTab('puntos', { currentTarget: document.querySelector('.admin-tab.active') });
+}
+function closeAdminModal() { document.getElementById('adminModal')?.classList.remove('active'); }
+
+// Placeholders
+function inicializarPanelMontajes() { console.log('Panel montajes'); }
+function inicializarPanelTornillos() { console.log('Panel tornillos'); }
+function inicializarPanelPiezas() { console.log('Panel piezas'); }
+function inicializarPanelMateriales() { console.log('Panel materiales'); }
+function inicializarPanelChecklist() { console.log('Panel checklist'); }
+function inicializarPanelComentarios() { console.log('Panel comentarios'); }
+function inicializarPanelHerramientas() { console.log('Panel herramientas'); }
+function inicializarPanelOperaciones() { console.log('Panel operaciones'); }
+function inicializarPanelOperarios() { console.log('Panel operarios'); }
+function inicializarPanelGestionOperarios() { console.log('Panel gestion operarios'); }
+function inicializarPanelRegistros() { console.log('Panel registros'); }
+function inicializarPanelVinculacion() { console.log('Panel vinculacion'); }
+function inicializarPanelAlertas() { console.log('Panel alertas'); }
+
+// ==============================================
+// 12. SINCRONIZACIÓN EN TIEMPO REAL
+// ==============================================
+
+function sincronizarTiempoReal(coleccion, callback) {
+    const db = window.db;
+    if (!db) {
+        console.log('Firebase no disponible, no se puede sincronizar en tiempo real');
+        return;
+    }
+    
+    console.log(`📡 Activando sincronización en tiempo real para: ${coleccion}`);
+    
+    // Escuchar cambios en tiempo real
+    db.collection(coleccion).onSnapshot((snapshot) => {
+        let cambios = false;
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+                console.log(`📡 + Añadido: ${change.doc.id}`);
+                guardarLocal(coleccion, change.doc.id, change.doc.data());
+                cambios = true;
+            }
+            if (change.type === 'modified') {
+                console.log(`📡 ✏️ Modificado: ${change.doc.id}`);
+                guardarLocal(coleccion, change.doc.id, change.doc.data());
+                cambios = true;
+            }
+            if (change.type === 'removed') {
+                console.log(`📡 🗑️ Eliminado: ${change.doc.id}`);
+                eliminarLocal(coleccion, change.doc.id);
+                cambios = true;
+            }
+        });
+        
+        // Refrescar la interfaz si hubo cambios
+        if (cambios) {
+            console.log('🔄 Actualizando interfaz por cambios en tiempo real');
+            if (callback) callback();
+            
+            // También refrescar el panel admin si está abierto
+            const panelEstaciones = document.getElementById('panelPuntos');
+            if (panelEstaciones && panelEstaciones.classList.contains('active')) {
+                cargarListaEstacionesAdmin();
+            }
+        }
+    }, (error) => {
+        console.error('Error en listener de Firebase:', error);
+    });
+}
+
+// ==============================================
+// 13. INICIALIZACIÓN PRINCIPAL (ACTUALIZADA)
+// ==============================================
+
+function init() {
+    inicializarFirebase();
+    initConnectionListeners();
+    
+    // Sincronización en tiempo real
+    setTimeout(() => {
+        if (window.db) {
+            sincronizarTiempoReal('estaciones', () => {
+                renderizarEstacionesArmario();
+                if (typeof cargarListaEstacionesAdmin === 'function') {
+                    cargarListaEstacionesAdmin();
+                }
+            });
+            
+            // Activar sincronización de montajes
+            sincronizarMontajesTiempoReal();
+            sincronizarMaterialesTiempoReal();
+        }
+    }, 1000);
+    
+    
+    console.log('?? Sistema híbrido (localStorage + Firebase) listo');
+}
+
+init();
+
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => renderizarEstacionesArmario(), 500);
+});
+
+
+// ==============================================
+// 14. GESTIÓN DE MONTAJES
+// ==============================================
+
+let montajesData = {};
+let currentMontajeId = null;
+
+// Cargar selector de estaciones en panel montajes
+async function cargarSelectorEstacionesMontajes() {
+    const selector = document.getElementById('selectorPuntoMontajes');
+    if (!selector) return;
+    
+    // Crear un selector de modelo si no existe
+    let modeloSelector = document.getElementById('selectorModeloMontajes');
+    if (!modeloSelector) {
+        const panel = document.getElementById('panelMontajes');
+        const labelModelo = document.createElement('div');
+        labelModelo.className = 'form-group';
+        labelModelo.innerHTML = `
+            <label>📦 Seleccionar Modelo</label>
+            <select id="selectorModeloMontajes" style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:15px;">
+                <option value="">Seleccionar modelo...</option>
+                <option value="MS3">🔷 MS3</option>
+                <option value="DC3">🔶 DC3</option>
+            </select>
+        `;
+        panel.insertBefore(labelModelo, selector.parentElement);
+        modeloSelector = document.getElementById('selectorModeloMontajes');
+        
+        // Evento para cuando cambie el modelo
+        modeloSelector.addEventListener('change', () => {
+            cargarSelectorEstacionesPorModelo();
+        });
+    }
+    
+    await cargarSelectorEstacionesPorModelo();
+}
+
+async function cargarSelectorEstacionesPorModelo() {
+    const modeloSelector = document.getElementById('selectorModeloMontajes');
+    const estacionSelector = document.getElementById('selectorPuntoMontajes');
+    const modelo = modeloSelector?.value;
+    
+    if (!modelo || !estacionSelector) {
+        estacionSelector.innerHTML = '<option value="">Primero selecciona un modelo</option>';
+        return;
+    }
+    
+    const estaciones = await cargarDatosFirebase('estaciones');
+    const montajes = await cargarDatosFirebase('montajes');
+    
+    // Filtrar estaciones por modelo
+    const estacionesFiltradas = Object.entries(estaciones).filter(([id, estacion]) => estacion.modelo === modelo);
+    
+    // Ordenar estaciones por número
+    estacionesFiltradas.sort((a, b) => {
+        const numA = parseInt(a[1].nombre?.match(/\d+/)?.[0]) || 0;
+        const numB = parseInt(b[1].nombre?.match(/\d+/)?.[0]) || 0;
+        return numA - numB;
+    });
+    
+    estacionSelector.innerHTML = '<option value="">Seleccionar estación...</option>';
+    
+    for (const [id, estacion] of estacionesFiltradas) {
+        const numMontajes = Object.values(montajes).filter(m => m.puntoId === id).length;
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${estacion.nombre} - 📦 ${numMontajes} montaje${numMontajes !== 1 ? 's' : ''}`;
+        estacionSelector.appendChild(option);
+    }
+    
+    // Limpiar lista de montajes al cambiar el modelo
+    const montajesContainer = document.getElementById('montajesList');
+    if (montajesContainer) {
+        montajesContainer.innerHTML = '<div class="empty-state">Selecciona una estación</div>';
+    }
+    
+    // Ocultar formulario de edición
+    const editForm = document.querySelector('#panelMontajes .edit-form');
+    if (editForm) editForm.style.display = 'none';
+}
+
+// Cargar montajes de una estación
+async function cargarMontajesPunto() {
+    const selector = document.getElementById('selectorPuntoMontajes');
+    const puntoId = selector?.value;
+    const container = document.getElementById('montajesList');
+    
+    if (!puntoId || !container) {
+        if (container) container.innerHTML = '<div class="empty-state">Selecciona una estación</div>';
+        // Ocultar formulario de edición
+        const editForm = document.querySelector('#panelMontajes .edit-form');
+        if (editForm) editForm.style.display = 'none';
+        return;
+    }
+    
+    container.innerHTML = '<div class="empty-state">⏳ Cargando montajes...</div>';
+    
+    try {
+        const data = await cargarDatosFirebase('montajes');
+        montajesData = data;
+        
+        const montajesFiltrados = Object.entries(montajesData).filter(([id, montaje]) => montaje.puntoId === puntoId);
+        
+        // Ordenar montajes por número de operación
+        montajesFiltrados.sort((a, b) => {
+            const tipoA = a[1].tipo || '';
+            const tipoB = b[1].tipo || '';
+            return tipoA.localeCompare(tipoB);
+        });
+        
+        if (montajesFiltrados.length === 0) {
+            container.innerHTML = '<div class="empty-state">📦 No hay montajes para esta estación. Presiona "+ Nuevo Montaje" para crear uno.</div>';
+            // Ocultar formulario de edición
+            const editForm = document.querySelector('#panelMontajes .edit-form');
+            if (editForm) editForm.style.display = 'none';
+            return;
+        }
+        
+        container.innerHTML = '';
+        for (const [id, montaje] of montajesFiltrados) {
+            const div = document.createElement('div');
+            div.className = `list-item ${currentMontajeId === id ? 'selected' : ''}`;
+            div.innerHTML = `
+                <div class="list-item-title">${montaje.icono || '📦'} ${montaje.nombre || 'Sin nombre'}</div>
+                <div class="list-item-sub">
+                    ${montaje.tipo || 'Sin operación'} | Tiempo: ${montaje.tiempoHoras || 0}h
+                </div>
+            `;
+            div.onclick = () => seleccionarMontajeAdmin(id, puntoId);
+            container.appendChild(div);
+        }
+        
+        // Si no hay montaje seleccionado, ocultar formulario
+        if (!currentMontajeId) {
+            const editForm = document.querySelector('#panelMontajes .edit-form');
+            if (editForm) editForm.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error cargando montajes:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar montajes</div>';
+    }
+}
+
+// Seleccionar montaje para editar
+function seleccionarMontajeAdmin(id, puntoId) {
+    currentMontajeId = id;
+    cargarMontajesPunto();
+    
+    const montaje = montajesData[id];
+    if (!montaje) return;
+    
+    // Mostrar el formulario de edición
+    const editForm = document.querySelector('#panelMontajes .edit-form');
+    if (editForm) editForm.style.display = 'block';
+    
+    document.getElementById('editMontajePuntoId').value = puntoId;
+    document.getElementById('editMontajeId').value = id;
+    document.getElementById('editMontajeNombre').value = montaje.nombre || '';
+    document.getElementById('editMontajeTipo').value = montaje.tipo || '';
+    document.getElementById('editMontajeIcono').value = montaje.icono || '📦';
+    document.getElementById('editMontajeHorasDecimal').value = montaje.tiempoHoras || 0;
+    
+    // Cargar imágenes si hay
+    if (montaje.imagenes && Array.isArray(montaje.imagenes)) {
+        document.getElementById('imagenesCount').textContent = `${montaje.imagenes.length} imágenes`;
+    } else {
+        document.getElementById('imagenesCount').textContent = '0 imágenes';
+    }
+}
+
+// Mostrar formulario nuevo montaje
+function mostrarFormNuevoMontaje() {
+    const selector = document.getElementById('selectorPuntoMontajes');
+    const puntoId = selector?.value;
+    
+    if (!puntoId) {
+        alert('Primero selecciona una estación');
+        return;
+    }
+    
+    currentMontajeId = null;
+    
+    // Limpiar selección visual en la lista
+    const items = document.querySelectorAll('#montajesList .list-item');
+    items.forEach(item => item.classList.remove('selected'));
+    
+    // Mostrar el formulario de edición
+    const editForm = document.querySelector('#panelMontajes .edit-form');
+    if (editForm) {
+        editForm.style.display = 'block';
+    }
+    
+    // Limpiar formulario
+    document.getElementById('editMontajePuntoId').value = puntoId;
+    document.getElementById('editMontajeId').value = '';
+    document.getElementById('editMontajeNombre').value = '';
+    document.getElementById('editMontajeTipo').value = '';
+    document.getElementById('editMontajeIcono').value = '📦';
+    document.getElementById('editMontajeHorasDecimal').value = '';
+    document.getElementById('imagenesCount').textContent = '0 imágenes';
+    
+    // Limpiar previsualización de imágenes
+    const previewContainer = document.getElementById('imagenesPreviewContainer');
+    if (previewContainer) previewContainer.innerHTML = '';
+    
+    console.log('📝 Formulario nuevo montaje listo');
+}
+
+// Guardar montaje
+// Guardar montaje
+async function guardarMontaje() {
+    const puntoId = document.getElementById('editMontajePuntoId').value;
+    const id = document.getElementById('editMontajeId').value;
+    const nombre = document.getElementById('editMontajeNombre').value.trim();
+    const tipo = document.getElementById('editMontajeTipo').value.trim();
+    const icono = document.getElementById('editMontajeIcono').value.trim() || '📦';
+    const tiempoHoras = parseFloat(document.getElementById('editMontajeHorasDecimal').value) || 0;
+    
+    if (!puntoId) {
+        alert('Error: No hay estación seleccionada');
+        return;
+    }
+    
+    if (!nombre) {
+        alert('El nombre del montaje es obligatorio');
+        return;
+    }
+    
+    if (!tipo) {
+        alert('El número de operación es obligatorio');
+        return;
+    }
+    
+    let montajeId = id;
+    if (!montajeId) {
+        // Limpiar el número de operación (ej: "OP-010" -> "OP010", "OP 010" -> "OP010")
+        let operacionLimpia = tipo.toUpperCase()
+            .replace(/\s+/g, '')      // quitar espacios
+            .replace(/-/g, '')        // quitar guiones
+            .replace(/[^A-Z0-9]/g, ''); // solo letras y números
+        
+        montajeId = `${puntoId}_${operacionLimpia}`;
+        console.log(`🆔 ID del montaje generado: ${montajeId}`);
+        
+        // Verificar si ya existe un montaje con este ID
+        const montajesExistentes = await cargarDatosFirebase('montajes');
+        if (montajesExistentes[montajeId]) {
+            alert(`⚠️ Ya existe un montaje con el número de operación ${tipo} en esta estación. Usa otro número.`);
+            return;
+        }
+    }
+    
+    const montajeData = {
+        puntoId: puntoId,
+        nombre: nombre,
+        tipo: tipo,
+        icono: icono,
+        tiempoHoras: tiempoHoras,
+        imagenes: [],
+        updatedAt: new Date().toISOString()
+    };
+    
+    if (!id) montajeData.createdAt = new Date().toISOString();
+    
+    await guardarFirebase('montajes', montajeId, montajeData);
+    
+    document.getElementById('saveIndicator')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('saveIndicator')?.classList.add('hidden'), 1500);
+    
+    await cargarMontajesPunto();
+    await renderizarEstacionesArmario();
+    
+    // Si hay una estación seleccionada en el armario, recargar sus montajes
+    if (window.currentEstacionId) {
+        await cargarMontajesDeEstacion(window.currentEstacionId);
+    }
+    
+    // Limpiar formulario si era nuevo
+    if (!id) {
+        document.getElementById('editMontajeNombre').value = '';
+        document.getElementById('editMontajeTipo').value = '';
+        document.getElementById('editMontajeHorasDecimal').value = '';
+    }
+    
+    console.log(`✅ Montaje guardado: ${montajeId}`);
+}
+
+// Eliminar montaje
+async function eliminarMontaje() {
+    if (!currentMontajeId) {
+        alert('Selecciona un montaje primero');
+        return;
+    }
+    
+    if (!confirm('¿Eliminar este montaje permanentemente?')) return;
+    
+    await eliminarFirebase('montajes', currentMontajeId);
+    currentMontajeId = null;
+    
+    document.getElementById('editMontajeId').value = '';
+    document.getElementById('editMontajeNombre').value = '';
+    document.getElementById('editMontajeTipo').value = '';
+    document.getElementById('editMontajeHorasDecimal').value = '';
+    
+    await cargarMontajesPunto();
+    
+    document.getElementById('saveIndicator')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('saveIndicator')?.classList.add('hidden'), 1500);
+}
+
+// Inicializar panel montajes
+function inicializarPanelMontajes() {
+    // Asegurar que no hay scroll
+    const montajesList = document.getElementById('montajesList');
+    if (montajesList) {
+        montajesList.style.maxHeight = 'none';
+        montajesList.style.overflowY = 'visible';
+    }
+    
+    // Ocultar el formulario de edición al inicio
+    const editForm = document.querySelector('#panelMontajes .edit-form');
+    if (editForm) {
+        editForm.style.display = 'none';
+    }
+    
+    // Cargar selector de estaciones con filtro por modelo
+    cargarSelectorEstacionesMontajes();
+    
+    // Agregar botón nuevo montaje si no existe
+    const panel = document.getElementById('panelMontajes');
+    if (panel && !document.getElementById('btnNuevoMontaje')) {
+        panel.insertAdjacentHTML('beforeend', `
+            <button id="btnNuevoMontaje" class="btn btn-primary" onclick="mostrarFormNuevoMontaje()" style="width:100%; margin-top:15px;">➕ Nuevo Montaje</button>
+        `);
+    }
+}
+
+
+// ==============================================
+// 15. SINCRONIZACIÓN DE MONTAJES EN TIEMPO REAL
+// ==============================================
+
+function sincronizarMontajesTiempoReal() {
+    const db = window.db;
+    if (!db) {
+        console.log('Firebase no disponible');
+        return;
+    }
+    
+    console.log('📡 Activando sincronización en tiempo real para montajes');
+    
+    db.collection('montajes').onSnapshot((snapshot) => {
+        let cambios = false;
+        
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+                console.log(`📡 + Montaje añadido: ${change.doc.id}`);
+                guardarLocal('montajes', change.doc.id, change.doc.data());
+                cambios = true;
+            }
+            if (change.type === 'modified') {
+                console.log(`📡 ✏️ Montaje modificado: ${change.doc.id}`);
+                guardarLocal('montajes', change.doc.id, change.doc.data());
+                cambios = true;
+            }
+            if (change.type === 'removed') {
+                console.log(`📡 🗑️ Montaje eliminado: ${change.doc.id}`);
+                eliminarLocal('montajes', change.doc.id);
+                cambios = true;
+            }
+        });
+        
+        // Si hay cambios y hay una estación seleccionada, recargar sus montajes
+        if (cambios && window.currentEstacionId) {
+            console.log('🔄 Actualizando montajes en tiempo real');
+            cargarMontajesDeEstacion(window.currentEstacionId);
+        }
+        
+        // También actualizar panel admin si está visible
+        const panelMontajes = document.getElementById('panelMontajes');
+        if (panelMontajes && panelMontajes.classList.contains('active')) {
+            cargarMontajesPunto();
+        }
+        
+    }, (error) => {
+        console.error('Error en listener de montajes:', error);
+    });
+}
+
+
+// ==============================================
+// 16. GESTIÓN DE MATERIALES POR ESTACIÓN
+// ==============================================
+
+let materialesEntregados = {};
+let currentMaterialId = null;
+
+// Cargar selector de estación en admin de materiales
+async function cargarSelectorEstacionMateriales() {
+    const selector = document.getElementById('selectorEstacionMateriales');
+    if (!selector) return;
+    
+    const estaciones = await cargarDatosFirebase('estaciones');
+    const materiales = await cargarDatosFirebase('materiales_entregados');
+    
+    selector.innerHTML = '<option value="">Seleccionar estación...</option>';
+    
+    const estacionesArray = Object.entries(estaciones);
+    estacionesArray.sort((a, b) => {
+        const numA = parseInt(a[1].nombre?.match(/\d+/)?.[0]) || 0;
+        const numB = parseInt(b[1].nombre?.match(/\d+/)?.[0]) || 0;
+        return numA - numB;
+    });
+    
+    for (const [id, estacion] of estacionesArray) {
+        const dataEstacion = materiales[id];
+        const todosMateriales = dataEstacion?.materiales || [];
+        const totalMateriales = todosMateriales.length;
+        
+        // Contar materiales pendientes de verificar (incompletos Y no verificados)
+        const pendientesVerificar = todosMateriales.filter(m => m.estado === 'incompleto' && !m.verificado).length;
+        const verificados = todosMateriales.filter(m => m.verificado === true).length;
+        
+        let estadoIcon = '✅';
+        let estadoTexto = '';
+        
+        if (pendientesVerificar > 0) {
+            estadoIcon = '⚠️';
+            estadoTexto = ` - ⚠️ ${pendientesVerificar} pendiente${pendientesVerificar !== 1 ? 's' : ''}`;
+        } else if (totalMateriales > 0 && verificados === totalMateriales) {
+            estadoIcon = '✅';
+            estadoTexto = ` - ✅ Todo verificado`;
+        } else if (totalMateriales > 0) {
+            estadoIcon = '📦';
+            estadoTexto = ` - 📦 ${verificados}/${totalMateriales} verificado${verificados !== 1 ? 's' : ''}`;
+        }
+        
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${estacion.nombre} (${estacion.modelo}) ${estadoIcon}${estadoTexto}`;
+        selector.appendChild(option);
+    }
+}
+
+// Cargar lista de materiales de una estación
+async function cargarMaterialesEstacion() {
+    const selector = document.getElementById('selectorEstacionMateriales');
+    const estacionId = selector?.value;
+    const container = document.getElementById('materialesList');
+    
+    if (!estacionId || !container) {
+        if (container) container.innerHTML = '<div class="empty-state">Selecciona una estación</div>';
+        const form = document.getElementById('formMaterialEntrega');
+        if (form) form.style.display = 'none';
+        return;
+    }
+    
+    container.innerHTML = '<div class="empty-state">⏳ Cargando materiales...</div>';
+    
+    try {
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        materialesEntregados = estacionData.materiales || [];
+        
+        if (materialesEntregados.length === 0) {
+            container.innerHTML = '<div class="empty-state">📦 No hay materiales configurados para esta estación. Presiona "+ Nuevo Material" para agregar.</div>';
+            const form = document.getElementById('formMaterialEntrega');
+            if (form) form.style.display = 'none';
+            return;
+        }
+        
+        container.innerHTML = '';
+        for (let i = 0; i < materialesEntregados.length; i++) {
+            const material = materialesEntregados[i];
+            const div = document.createElement('div');
+            div.className = `list-item ${currentMaterialId === i ? 'selected' : ''}`;
+            const estadoClass = material.estado === 'completo' ? '✅' : '⚠️';
+            const verificadoClass = material.verificado ? '✅ Verificado' : '⏳ Pendiente';
+            const faltantes = material.cantidadNecesaria - material.cantidadEntregada;
+            
+            // Mostrar códigos escaneados si el material requiere escaneo
+            let codigosHTML = '';
+            if (material.requiereEscaneo && material.serialNumbers?.length > 0) {
+                codigosHTML = `<div style="margin-top:5px; font-size:0.7rem; color:#2196f3; background:#e3f2fd; padding:4px 8px; border-radius:5px;">
+                    📷 Códigos escaneados (${material.serialNumbers.length}/${material.cantidadEscaneosRequeridos || 0}): 
+                    ${material.serialNumbers.join(', ')}
+                </div>`;
+            } else if (material.requiereEscaneo) {
+                codigosHTML = `<div style="margin-top:5px; font-size:0.7rem; color:#ff9800; background:#fff3e0; padding:4px 8px; border-radius:5px;">
+                    📷 Pendiente de escaneo (0/${material.cantidadEscaneosRequeridos || 0})
+                </div>`;
+            }
+            
+            div.innerHTML = `
+                <div class="list-item-title">${estadoClass} ${material.nombre || 'Sin nombre'} - ${verificadoClass}</div>
+                <div class="list-item-sub">
+                    📊 Necesario: ${material.cantidadNecesaria} uds | 
+                    📦 Entregado: ${material.cantidadEntregada} uds |
+                    ${material.estado === 'completo' ? '✅ Completo' : `❌ Faltan ${faltantes} uds`}
+                </div>
+                ${codigosHTML}
+            `;
+            div.onclick = () => seleccionarMaterialAdmin(i, estacionId);
+            container.appendChild(div);
+        }
+        
+        if (currentMaterialId === null) {
+            const form = document.getElementById('formMaterialEntrega');
+            if (form) form.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error cargando materiales:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar materiales</div>';
+    }
+}
+
+// Seleccionar material para editar
+function seleccionarMaterialAdmin(index, estacionId) {
+    currentMaterialId = index;
+    
+    cargarMaterialesEstacion().then(() => {
+        const material = materialesEntregados[index];
+        if (!material) return;
+        
+        const form = document.getElementById('formMaterialEntrega');
+        if (form) {
+            form.style.display = 'block';
+            document.getElementById('materialEstacionId').value = estacionId;
+            document.getElementById('materialIndex').value = index;
+            document.getElementById('materialNombre').value = material.nombre || '';
+            document.getElementById('materialCantidadNecesaria').value = material.cantidadNecesaria || 0;
+            document.getElementById('materialCantidadEntregada').value = material.cantidadEntregada || 0;
+            actualizarEstadoMaterial();
+            
+            // Cargar campos de escaneo
+            const requiereEscaneo = document.getElementById('materialRequiereEscaneo');
+            const campoEscaneos = document.getElementById('campoEscaneos');
+            const cantidadEscaneos = document.getElementById('materialCantidadEscaneos');
+            
+            if (requiereEscaneo) {
+                requiereEscaneo.value = material.requiereEscaneo ? 'true' : 'false';
+                if (campoEscaneos) {
+                    campoEscaneos.style.display = material.requiereEscaneo ? 'block' : 'none';
+                }
+                if (cantidadEscaneos) {
+                    cantidadEscaneos.value = material.cantidadEscaneosRequeridos || 1;
+                }
+            }
+            
+            // Mostrar tabla de códigos escaneados
+            const infoVerificacion = document.getElementById('infoVerificacion');
+            if (infoVerificacion) {
+                let tablaHTML = '';
+                if (material.requiereEscaneo && material.serialNumbers?.length > 0) {
+                    tablaHTML = `
+                        <div style="margin-top:10px;">
+                            <strong>📷 Códigos escaneados (${material.serialNumbers.length}/${material.cantidadEscaneosRequeridos || 0}):</strong>
+                            <div style="overflow-x:auto; margin-top:8px;">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                                    <thead>
+                                        <tr style="background:var(--primary); color:white;">
+                                            <th style="padding:8px; text-align:left; border-radius:8px 0 0 0;">#</th>
+                                            <th style="padding:8px; text-align:left;">Código escaneado</th>
+                                            <th style="padding:8px; text-align:left;">Fecha/Hora</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${material.serialNumbers.map((codigo, idx) => `
+                                            <tr style="border-bottom:1px solid var(--border);">
+                                                <td style="padding:8px;">${idx + 1}</td>
+                                                <td style="padding:8px; font-family:monospace;">${codigo}</td>
+                                          <td style="padding:8px; font-size:0.7rem;">
+    ${material.fechasEscaneo?.[idx] ? new Date(material.fechasEscaneo[idx]).toLocaleString() : 
+      (material.actualizado ? new Date(material.actualizado).toLocaleString() : '-')}
+</td>
+ </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                } else if (material.requiereEscaneo) {
+                    tablaHTML = `<div style="margin-top:10px; padding:8px; background:#fff3e0; border-radius:8px; font-size:0.75rem;">
+                        ⏳ Escaneo pendiente (0/${material.cantidadEscaneosRequeridos || 0})
+                    </div>`;
+                }
+                
+                if (material.verificado) {
+                    infoVerificacion.innerHTML = `
+                        <div style="margin-top:10px; padding:8px; background:#e8f5e9; border-radius:8px; font-size:0.8rem; color:#2e7d32;">
+                            ✅ Verificado por operario el ${material.verificadoFecha || 'fecha desconocida'}
+                        </div>
+                        ${tablaHTML}
+                    `;
+                    infoVerificacion.style.display = 'block';
+                } else {
+                    infoVerificacion.innerHTML = tablaHTML;
+                    infoVerificacion.style.display = material.requiereEscaneo ? 'block' : 'none';
+                }
+            }
+        }
+    });
+}
+
+// Actualizar estado del material basado en cantidades
+function actualizarEstadoMaterial() {
+    const necesaria = parseInt(document.getElementById('materialCantidadNecesaria').value) || 0;
+    const entregada = parseInt(document.getElementById('materialCantidadEntregada').value) || 0;
+    const estadoSpan = document.getElementById('materialEstadoPreview');
+    
+    if (entregada >= necesaria) {
+        estadoSpan.innerHTML = '✅ Completo';
+        estadoSpan.style.color = '#4caf50';
+    } else {
+        const faltan = necesaria - entregada;
+        estadoSpan.innerHTML = `⚠️ Incompleto - Faltan ${faltan} uds`;
+        estadoSpan.style.color = '#f44336';
+    }
+}
+
+// Mostrar formulario nuevo material
+function mostrarFormNuevoMaterial() {
+
+
+    console.log('mostrarFormNuevoMaterial ejecutado');
+    
+    // Usar el ID correcto del selector
+    const selector = document.getElementById('selectorEstacionMateriales');
+    const estacionId = selector?.value;
+    
+    console.log('Estación ID:', estacionId);
+    
+    if (!estacionId) {
+        alert('Primero selecciona una estación');
+        return;
+    }
+    
+    currentMaterialId = null;
+    
+    // Refrescar la lista para quitar selección
+    cargarMaterialesEstacion();
+    
+    // Mostrar el formulario
+    const form = document.getElementById('formMaterialEntrega');
+    if (form) {
+        form.style.display = 'block';
+        document.getElementById('materialEstacionId').value = estacionId;
+        document.getElementById('materialIndex').value = '';
+        document.getElementById('materialNombre').value = '';
+        document.getElementById('materialCantidadNecesaria').value = '';
+        document.getElementById('materialCantidadEntregada').value = '';
+        document.getElementById('materialEstadoPreview').innerHTML = '—';
+        console.log('Formulario mostrado');
+    } else {
+        console.error('No se encuentra formMaterialEntrega');
+    }
+    
+    // Limpiar selección visual
+    const items = document.querySelectorAll('#materialesList .list-item');
+    items.forEach(item => item.classList.remove('selected'));
+}
+
+// Guardar material
+async function guardarMaterialEntrega() {
+    const estacionId = document.getElementById('materialEstacionId').value;
+    const index = document.getElementById('materialIndex').value;
+    const nombre = document.getElementById('materialNombre').value.trim();
+    const cantidadNecesaria = parseInt(document.getElementById('materialCantidadNecesaria').value) || 0;
+    const cantidadEntregada = parseInt(document.getElementById('materialCantidadEntregada').value) || 0;
+    
+    if (!estacionId) {
+        alert('Error: No hay estación seleccionada');
+        return;
+    }
+    
+    if (!nombre) {
+        alert('El nombre del material es obligatorio');
+        return;
+    }
+    
+    const estado = cantidadEntregada >= cantidadNecesaria ? 'completo' : 'incompleto';
+    
+    // Obtener datos de escaneo del formulario
+    const requiereEscaneoSelect = document.getElementById('materialRequiereEscaneo');
+    const requiereEscaneo = requiereEscaneoSelect ? requiereEscaneoSelect.value === 'true' : false;
+    const cantidadEscaneosRequeridos = requiereEscaneo ? 
+        parseInt(document.getElementById('materialCantidadEscaneos')?.value) || 0 : 0;
+    
+    // Obtener datos actuales
+    const data = await cargarDatosFirebase('materiales_entregados');
+    const estacionData = data[estacionId] || { materiales: [] };
+    let materiales = estacionData.materiales || [];
+    
+    let serialesExistentes = [];
+    let escaneoCompletadoExistente = false;
+    let verificadoExistente = false;
+    let verificadoFechaExistente = null;
+    
+    if (index !== '') {
+        const idx = parseInt(index);
+        if (materiales[idx]) {
+            serialesExistentes = materiales[idx].serialNumbers || [];
+  let  fechasExistentes = materiales[idx].fechasEscaneo || [];escaneoCompletadoExistente = materiales[idx].escaneoCompletado || false;
+            verificadoExistente = materiales[idx].verificado || false;
+            verificadoFechaExistente = materiales[idx].verificadoFecha || null;
+        }
+    }
+    
+    const nuevoMaterial = {
+        nombre: nombre,
+        cantidadNecesaria: cantidadNecesaria,
+        cantidadEntregada: cantidadEntregada,
+        estado: estado,
+        fechasEscaneo: fechasExistentes,
+        verificado: verificadoExistente,
+        verificadoFecha: verificadoFechaExistente,
+        requiereEscaneo: requiereEscaneo,
+        cantidadEscaneosRequeridos: cantidadEscaneosRequeridos,
+        serialNumbers: serialesExistentes,
+        escaneoCompletado: escaneoCompletadoExistente || (serialesExistentes.length >= cantidadEscaneosRequeridos),
+        actualizado: new Date().toISOString(),
+        createdAt: index === '' ? new Date().toISOString() : (materiales[parseInt(index)]?.createdAt || new Date().toISOString())
+    };
+    
+    if (index === '') {
+        materiales.push(nuevoMaterial);
+    } else {
+        materiales[parseInt(index)] = nuevoMaterial;
+    }
+    
+    const nuevosDatos = {
+        materiales: materiales,
+        ultimaActualizacion: new Date().toISOString()
+    };
+    
+    await guardarFirebase('materiales_entregados', estacionId, nuevosDatos);
+    
+    const indicator = document.getElementById('saveIndicator');
+    if (indicator) {
+        indicator.classList.remove('hidden');
+        setTimeout(() => indicator.classList.add('hidden'), 1500);
+    }
+    
+    // Recargar la lista en admin
+    await cargarMaterialesEstacion();
+    
+    // Mantener el selector en la misma estación
+    const selector = document.getElementById('selectorEstacionMateriales');
+    if (selector) {
+        selector.value = estacionId;
+    }
+    
+    // Cerrar formulario SOLO si era nuevo
+    const form = document.getElementById('formMaterialEntrega');
+    if (form && index === '') {
+        form.style.display = 'none';
+        document.getElementById('materialNombre').value = '';
+        document.getElementById('materialCantidadNecesaria').value = '';
+        document.getElementById('materialCantidadEntregada').value = '';
+        if (requiereEscaneoSelect) requiereEscaneoSelect.value = 'false';
+        const campoEscaneos = document.getElementById('campoEscaneos');
+        if (campoEscaneos) campoEscaneos.style.display = 'none';
+        const cantidadEscaneos = document.getElementById('materialCantidadEscaneos');
+        if (cantidadEscaneos) cantidadEscaneos.value = '1';
+    }
+    
+    // Limpiar selección actual
+    currentMaterialId = null;
+    
+    await renderizarEstacionesArmario();
+    
+    console.log(`✅ Material guardado en ${estacionId}`);
+}
+
+// Eliminar material
+async function eliminarMaterialEntrega() {
+    if (currentMaterialId === null) {
+        alert('Selecciona un material primero');
+        return;
+    }
+    
+    if (!confirm('¿Eliminar este material permanentemente?')) return;
+    
+    const estacionId = document.getElementById('materialEstacionId').value;
+    
+    const data = await cargarDatosFirebase('materiales_entregados');
+    const estacionData = data[estacionId] || { materiales: [] };
+    let materiales = estacionData.materiales || [];
+    
+    materiales.splice(currentMaterialId, 1);
+    
+    const nuevosDatos = {
+        materiales: materiales,
+        ultimaActualizacion: new Date().toISOString()
+    };
+    
+    await guardarFirebase('materiales_entregados', estacionId, nuevosDatos);
+    
+    currentMaterialId = null;
+    
+    const form = document.getElementById('formMaterialEntrega');
+    if (form) form.style.display = 'none';
+    
+    await cargarMaterialesEstacion();
+    await renderizarEstacionesArmario();
+    
+    document.getElementById('saveIndicator')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('saveIndicator')?.classList.add('hidden'), 1500);
+}
+
+// Inicializar panel de materiales
+function inicializarPanelMateriales() {
+    const panel = document.getElementById('panelMateriales');
+    if (!panel) return;
+    
+    // Verificar si ya existe el contenido
+    if (!document.getElementById('selectorEstacionMateriales')) {
+        panel.innerHTML = `
+            <div class="form-group">
+                <label>📍 Seleccionar Estación</label>
+                <select id="selectorEstacionMateriales" style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:15px;">
+                    <option value="">Seleccionar estación...</option>
+                </select>
+            </div>
+            <div id="materialesList" class="items-list" style="margin-bottom:15px; max-height:300px; overflow-y:auto;">
+                <div class="empty-state">Selecciona una estación</div>
+            </div>
+        <div id="formMaterialEntrega" style="display:none; background:var(--bg-elevated); padding:20px; border-radius:16px; margin-top:15px;">
+    <h4 style="margin-bottom:15px;">📦 Material</h4>
+    <input type="hidden" id="materialEstacionId">
+    <input type="hidden" id="materialIndex">
+    <div class="form-group">
+        <label>🔩 Nombre del material *</label>
+        <input type="text" id="materialNombre" placeholder="Ej: Kit de resistencias" style="width:100%; padding:12px; border-radius:10px;">
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label>📊 Cantidad necesaria</label>
+            <input type="number" id="materialCantidadNecesaria" onchange="actualizarEstadoMaterial()" style="width:100%; padding:12px; border-radius:10px;">
+        </div>
+        <div class="form-group">
+            <label>📦 Cantidad entregada</label>
+            <input type="number" id="materialCantidadEntregada" onchange="actualizarEstadoMaterial()" style="width:100%; padding:12px; border-radius:10px;">
+        </div>
+    </div>
+ 
+<div class="form-group">
+    <label>📷 Requiere escaneo de código</label>
+    <select id="materialRequiereEscaneo" onchange="toggleCamposEscaneo()" style="width:100%; padding:12px; border-radius:10px;">
+        <option value="false">No</option>
+        <option value="true">Sí (requiere escanear)</option>
+    </select>
+</div>
+<div id="campoEscaneos" style="display:none;">
+    <div class="form-group">
+        <label>🔢 Cantidad de escaneos requeridos</label>
+        <input type="number" id="materialCantidadEscaneos" min="1" value="1" style="width:100%; padding:12px; border-radius:10px;">
+        <small style="color:var(--text-tertiary);">Número de veces que debe escanear (ej: 17 condensadores)</small>
+    </div>
+</div>
+    
+    <div class="form-group">
+        <label>📋 Estado:</label>
+        <span id="materialEstadoPreview" style="font-weight:bold;">—</span>
+    </div>
+    
+    
+    <!-- DIV PARA INFO DE VERIFICACIÓN -->
+    <div id="infoVerificacion" style="display:none; margin-top:10px;"></div>
+    
+    <div class="action-buttons" style="display:flex; gap:10px; margin-top:15px;">
+        <button class="btn btn-success" onclick="guardarMaterialEntrega()">💾 Guardar</button>
+        <button class="btn btn-danger" onclick="eliminarMaterialEntrega()">🗑️ Eliminar</button>
+        <button class="btn" onclick="document.getElementById('formMaterialEntrega').style.display='none'">❌ Cancelar</button>
+    </div>
+</div>
+        `;
+        
+        // Crear el botón con JavaScript para asegurar el evento
+        const btn = document.createElement('button');
+        btn.id = 'btnNuevoMaterialEntrega';
+        btn.className = 'btn btn-primary';
+        btn.style.width = '100%';
+        btn.style.marginTop = '15px';
+        btn.textContent = '➕ Nuevo Material';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            const selector = document.getElementById('selectorEstacionMateriales');
+            const estacionId = selector?.value;
+            if (!estacionId) {
+                alert('Primero selecciona una estación');
+                return;
+            }
+            const form = document.getElementById('formMaterialEntrega');
+            if (form) {
+                form.style.display = 'block';
+                document.getElementById('materialEstacionId').value = estacionId;
+                document.getElementById('materialIndex').value = '';
+                document.getElementById('materialNombre').value = '';
+                document.getElementById('materialCantidadNecesaria').value = '';
+                document.getElementById('materialCantidadEntregada').value = '';
+                document.getElementById('materialEstadoPreview').innerHTML = '—';
+            }
+        };
+        panel.appendChild(btn);
+        
+        // Añadir evento al selector
+        const selector = document.getElementById('selectorEstacionMateriales');
+        selector.addEventListener('change', () => {
+            currentMaterialId = null;
+            cargarMaterialesEstacion();
+        });
+    }
+    
+    cargarSelectorEstacionMateriales();
+}
+
+function sincronizarMaterialesTiempoReal() {
+    const db = window.db;
+    if (!db) return;
+    
+    console.log('📡 Activando sincronización en tiempo real para materiales');
+    
+    db.collection('materiales_entregados').onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added' || change.type === 'modified') {
+                console.log(`📡 Materiales actualizados: ${change.doc.id}`);
+                guardarLocal('materiales_entregados', change.doc.id, change.doc.data());
+            }
+            if (change.type === 'removed') {
+                console.log(`📡 Materiales eliminados: ${change.doc.id}`);
+                eliminarLocal('materiales_entregados', change.doc.id);
+            }
+        });
+        
+        // Actualizar armario y vista actual
+        renderizarEstacionesArmario();
+        if (window.currentEstacionId) {
+            cargarMontajesDeEstacion(window.currentEstacionId);
+        }
+    }, (error) => {
+        console.error('Error en listener de materiales:', error);
+    });
+}
+
+function showPartsTab() {
+    document.getElementById('tabAssembliesBtn').classList.remove('active');
+    document.getElementById('tabFastenersBtn').classList.remove('active');
+    document.getElementById('tabPartsBtn').classList.add('active');
+    
+    document.getElementById('assembliesTab').style.display = 'none';
+    document.getElementById('fastenersTab').style.display = 'none';
+    document.getElementById('partsTab').style.display = 'block';
+    
+    // Recargar materiales siempre
+    cargarMaterialesEstacionSeleccionada();
+}
+
+function mostrarMensajeMateriales() {
+    // Buscar o crear el contenedor de avisos fuera de partsDetail
+    let avisoContainer = document.getElementById('avisoMaterialesContainer');
+    if (!avisoContainer) {
+        avisoContainer = document.createElement('div');
+        avisoContainer.id = 'avisoMaterialesContainer';
+        avisoContainer.style.cssText = 'margin-bottom:15px;';
+        // Insertar antes del partsDetail
+        const partsTab = document.getElementById('partsTab');
+        if (partsTab && partsTab.firstChild) {
+            partsTab.insertBefore(avisoContainer, partsTab.firstChild);
+        } else if (partsTab) {
+            partsTab.appendChild(avisoContainer);
+        }
+    }
+    
+    (async () => {
+        const estacionId = window.currentEstacionId;
+        if (!estacionId) return;
+        
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = estacionData.materiales || [];
+        const incompletos = materiales.filter(m => m.estado === 'incompleto').length;
+        
+        if (incompletos > 0) {
+            avisoContainer.style.display = 'block';
+            avisoContainer.innerHTML = `
+                <div style="background:#ffebee; border-left:4px solid #f44336; padding:12px; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.2rem;">⚠️</span>
+                    <div style="flex:1;">
+                        <strong>Atención:</strong> Esta estación tiene ${incompletos} material${incompletos !== 1 ? 'es' : ''} incompleto${incompletos !== 1 ? 's' : ''}.
+                        <span style="font-size:0.85rem; color:#666;"> Revisa los materiales antes de comenzar los montajes.</span>
+                    </div>
+                    <button onclick="document.getElementById('avisoMaterialesContainer').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">✕</button>
+                </div>
+            `;
+        } else {
+            avisoContainer.style.display = 'none';
+        }
+    })();
+}
+
+
+async function resetearVerificacionMaterial(estacionId, index) {
+    if (!confirm('¿Resetear la verificación de este material? El operario deberá verificarlo nuevamente.')) return;
+    
+    const data = await cargarDatosFirebase('materiales_entregados');
+    const estacionData = data[estacionId] || { materiales: [] };
+    let materiales = estacionData.materiales || [];
+    
+    if (materiales[index]) {
+        materiales[index].verificado = false;
+        delete materiales[index].verificadoFecha;
+        delete materiales[index].verificadoPor;
+        
+        const nuevosDatos = {
+            materiales: materiales,
+            ultimaActualizacion: new Date().toISOString()
+        };
+        
+        await guardarFirebase('materiales_entregados', estacionId, nuevosDatos);
+        
+        // Recargar vistas
+        await cargarMaterialesEstacion();
+        await renderizarEstacionesArmario();
+        
+        // Ocultar info de verificación
+        const infoVerificacion = document.getElementById('infoVerificacion');
+        if (infoVerificacion) infoVerificacion.style.display = 'none';
+        
+        // Cerrar formulario
+        document.getElementById('formMaterialEntrega').style.display = 'none';
+        currentMaterialId = null;
+        
+        const indicator = document.getElementById('saveIndicator');
+        if (indicator) {
+            indicator.classList.remove('hidden');
+            setTimeout(() => indicator.classList.add('hidden'), 1500);
+        }
+        
+        console.log(`✅ Verificación reseteada para material en ${estacionId}, índice ${index}`);
+    }
+}
+
+
+async function cargarMaterialesEstacionSeleccionada() {
+    const container = document.getElementById('partsDetail');
+    if (!container) return;
+    
+    const estacionId = window.currentEstacionId;
+    
+    if (!estacionId) {
+        container.innerHTML = '<div class="empty-state">No hay estación seleccionada</div>';
+        return;
+    }
+    
+    container.innerHTML = '<div class="empty-state">⏳ Cargando materiales...</div>';
+    
+    try {
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = estacionData.materiales || [];
+        
+        if (materiales.length === 0) {
+            container.innerHTML = '<div class="empty-state">📦 No hay materiales configurados para esta estación</div>';
+            return;
+        }
+        
+        // NUEVO: Contar solo los que están incompletos Y NO verificados
+        const pendientesVerificar = materiales.filter(m => m.estado === 'incompleto' && !m.verificado).length;
+        const verificados = materiales.filter(m => m.verificado === true).length;
+        const completos = materiales.filter(m => m.estado === 'completo').length;
+        
+        let html = `
+            <div style="margin-bottom:15px;">
+                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                    <span style="background:#f44336; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                        ⚠️ Pendientes verificar: ${pendientesVerificar}
+                    </span>
+                    <span style="background:#4caf50; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                        ✅ Verificados: ${verificados}
+                    </span>
+                    <span style="background:#2196f3; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                        📦 Completos: ${completos}
+                    </span>
+                </div>
+                ${pendientesVerificar === 0 ? `
+                    <div style="background:#e8f5e9; border-left:4px solid #4caf50; padding:12px; border-radius:8px; margin-bottom:15px;">
+                        ✅ ¡Todos los materiales han sido verificados! Puedes proceder con los montajes.
+                    </div>
+                ` : ''}
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+        `;
+        
+        for (let i = 0; i < materiales.length; i++) {
+    const material = materiales[i];
+    const faltan = material.cantidadNecesaria - material.cantidadEntregada;
+    const isIncompleto = material.estado === 'incompleto';
+    const isVerificado = material.verificado || false;
+    const isPendiente = isIncompleto && !isVerificado;
+    
+    html += `
+        <div class="assembly-card" style="border-left: 6px solid ${isVerificado ? '#4caf50' : (isPendiente ? '#f44336' : '#ff9800')}; padding:12px; margin:0;">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="assembly-icon" style="width:40px; height:40px; background:${isVerificado ? '#e8f5e9' : (isPendiente ? '#ffebee' : '#fff3e0')}; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                        ${isVerificado ? '✅' : (isPendiente ? '⚠️' : '📦')}
+                    </div>
+                    <span style="background:${isVerificado ? '#4caf50' : (isPendiente ? '#f44336' : '#ff9800')}; color:white; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:bold;">
+                        ${material.cantidadEntregada}/${material.cantidadNecesaria}
+                    </span>
+                </div>
+                <div>
+                    <h3 style="font-size:0.9rem; margin:5px 0;">${material.nombre}</h3>
+                    <div style="font-size:0.7rem; color:var(--text-tertiary);">
+                        📊 Necesario: ${material.cantidadNecesaria} uds
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-tertiary);">
+                        📦 Entregado: ${material.cantidadEntregada} uds
+                    </div>
+                </div>
+                ${!isVerificado && material.cantidadEntregada >= material.cantidadNecesaria ? `
+                    <button onclick="verificarMaterial('${estacionId}', ${i})" style="margin-top:8px; padding:8px; background:#4caf50; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.8rem;">
+                        ✅ Marcar como verificado
+                    </button>
+                ` : ''}
+                ${!isVerificado && material.cantidadEntregada < material.cantidadNecesaria ? `
+                    <div style="margin-top:8px; padding:8px; background:#ffebee; border-radius:8px; font-size:0.75rem; color:#c62828; text-align:center;">
+                        ⚠️ No se puede verificar - Faltan ${material.cantidadNecesaria - material.cantidadEntregada} unidades
+                    </div>
+                ` : ''}
+                ${isVerificado ? `
+                    <div style="margin-top:8px; padding:6px; background:#e8f5e9; border-radius:8px; font-size:0.7rem; color:#2e7d32; display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                        <span>✅ Verificado por operario</span>
+                        <span style="font-size:0.6rem;">${material.verificadoFecha || ''}</span>
+                    </div>
+                ` : ''}
+             ${isPendiente ? `
+    <div style="margin-top:5px; padding:6px; background:#ffebee; border-radius:8px; font-size:0.7rem; color:#c62828;">
+        ⚠️ Faltan ${faltan} unidades - Pendiente de verificar
+    </div>
+    <button onclick="solicitarMaterial('${estacionId}', '${material.nombre}', ${faltan})" style="margin-top:5px; padding:5px; background:#ff9800; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.7rem; width:100%;">
+        📢 Solicitar ${faltan} unidades faltantes
+    </button>
+` : ''}
+
+${material.requiereEscaneo ? `
+    <div style="margin-top:8px;">
+        <div style="font-size:0.7rem; margin-bottom:5px; background:#e3f2fd; padding:4px 8px; border-radius:5px;">
+            📷 Escaneo requerido: ${material.serialNumbers?.length || 0}/${material.cantidadEscaneosRequeridos || 0}
+        </div>
+        ${material.escaneoCompletado ? `
+            <div style="padding:6px; background:#e8f5e9; border-radius:8px; font-size:0.7rem; color:#2e7d32; text-align:center;">
+                ✅ Escaneo completado (${material.serialNumbers?.length || 0}/${material.cantidadEscaneosRequeridos || 0})
+            </div>
+        ` : `
+            <button onclick="abrirEscaneoMaterial('${estacionId}', ${i})" style="margin-top:5px; padding:6px; background:#2196f3; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.75rem; width:100%;">
+                📷 Escanear (${material.serialNumbers?.length || 0}/${material.cantidadEscaneosRequeridos || 0})
+            </button>
+        `}
+        ${material.serialNumbers?.length > 0 ? `
+            <div style="margin-top:5px; font-size:0.65rem; color:var(--text-tertiary);">
+                ✅ Escaneados: ${material.serialNumbers.length} códigos
+            </div>
+        ` : ''}
+    </div>
+` : ''}
+            </div>
+        </div>
+    `;
+}
+        
+        html += `</div>`;
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando materiales:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar materiales</div>';
+    }
+}
+
+// Función para verificar material
+async function verificarMaterial(estacionId, indice) {
+    console.log('Verificando material...', estacionId, indice);
+    
+    try {
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = [...estacionData.materiales];
+        
+        if (materiales[indice]) {
+            const cantidadEntregada = materiales[indice].cantidadEntregada;
+            const cantidadNecesaria = materiales[indice].cantidadNecesaria;
+            
+            // Solo permitir verificar si la cantidad entregada es suficiente
+            if (cantidadEntregada < cantidadNecesaria) {
+                alert(`⚠️ No se puede verificar "${materiales[indice].nombre}" porque faltan ${cantidadNecesaria - cantidadEntregada} unidades.`);
+                return;
+            }
+            
+            materiales[indice].verificado = true;
+            materiales[indice].verificadoFecha = new Date().toLocaleString();
+            materiales[indice].verificadoPor = 'operario';
+            
+            const nuevosDatos = {
+                materiales: materiales,
+                ultimaActualizacion: new Date().toISOString()
+            };
+            
+            await guardarFirebase('materiales_entregados', estacionId, nuevosDatos);
+            
+            console.log('Material verificado, actualizando vista...');
+            
+            await cargarMaterialesEstacionSeleccionada();
+            await renderizarEstacionesArmario();
+            
+            const indicator = document.getElementById('saveIndicator');
+            if (indicator) {
+                indicator.classList.remove('hidden');
+                setTimeout(() => indicator.classList.add('hidden'), 1500);
+            }
+        }
+    } catch (error) {
+        console.error('Error al verificar material:', error);
+        alert('Error al verificar el material. Intenta de nuevo.');
+    }
+}
+
+function actualizarResumenMateriales() {
+    const estacionId = window.currentEstacionId;
+    if (!estacionId) return;
+    
+    cargarDatosFirebase('materiales_entregados').then(data => {
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = estacionData.materiales || [];
+        const incompletos = materiales.filter(m => m.estado === 'incompleto').length;
+        const completos = materiales.filter(m => m.estado === 'completo').length;
+        
+        // Actualizar los span del resumen
+        const resumenDiv = document.querySelector('#partsDetail > div:first-child');
+        if (resumenDiv) {
+            resumenDiv.innerHTML = `
+                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                    <span style="background:#f44336; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                        ⚠️ Incompletos: ${incompletos}
+                    </span>
+                    <span style="background:#4caf50; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                        ✅ Completos: ${completos}
+                    </span>
+                </div>
+            `;
+        }
+    });
+}
+
+function mostrarListaMateriales() {
+    const container = document.getElementById('partsDetail');
+    if (!container || !window.materialesPendientes) return;
+    
+    const { materiales } = window.materialesPendientes;
+    mostrarListaMaterialesDirecta(materiales);
+    window.materialesPendientes = null;
+}
+
+function mostrarListaMaterialesDirecta(materiales) {
+    const container = document.getElementById('partsDetail');
+    if (!container) return;
+    
+    const incompletos = materiales.filter(m => m.estado === 'incompleto');
+    const completos = materiales.filter(m => m.estado === 'completo');
+    const materialesOrdenados = [...incompletos, ...completos];
+    
+    let html = `
+        <div style="margin-bottom:15px;">
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <span style="background:#f44336; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                    ⚠️ Incompletos: ${incompletos.length}
+                </span>
+                <span style="background:#4caf50; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem;">
+                    ✅ Completos: ${completos.length}
+                </span>
+            </div>
+        </div>
+    `;
+    
+    for (const material of materialesOrdenados) {
+        const faltan = material.cantidadNecesaria - material.cantidadEntregada;
+        const isIncompleto = material.estado === 'incompleto';
+        
+        html += `
+            <div class="pieza-card-montaje" style="border-left-color: ${isIncompleto ? '#f44336' : '#4caf50'}; margin-bottom:12px;">
+                <div class="pieza-header-montaje">
+                    <div class="pieza-info">
+                        <div class="pieza-tipo">
+                            <span class="pieza-icono">${isIncompleto ? '⚠️' : '✅'}</span>
+                            <span class="pieza-nombre">${material.nombre}</span>
+                        </div>
+                        <div class="pieza-medida">Necesario: ${material.cantidadNecesaria} uds</div>
+                        <div class="pieza-ref">Entregado: ${material.cantidadEntregada} uds</div>
+                    </div>
+                    <div class="pieza-cantidad" style="background: ${isIncompleto ? '#f44336' : '#4caf50'};">
+                        ${material.cantidadEntregada}/${material.cantidadNecesaria}
+                    </div>
+                </div>
+                ${isIncompleto ? `<div style="margin-top:10px; padding:8px; background:#ffebee; border-radius:8px; color:#c62828; font-size:0.8rem;">
+                    ⚠️ Faltan ${faltan} unidades. Consultar con almacén.
+                </div>` : ''}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function mostrarAvisoMateriales(materiales) {
+    let avisoContainer = document.getElementById('avisoMaterialesContainer');
+    
+    if (!avisoContainer) {
+        avisoContainer = document.createElement('div');
+        avisoContainer.id = 'avisoMaterialesContainer';
+        avisoContainer.style.cssText = 'margin-bottom:15px;';
+        const partsTab = document.getElementById('partsTab');
+        if (partsTab) {
+            partsTab.insertBefore(avisoContainer, partsTab.firstChild);
+        }
+    }
+    
+    const incompletos = materiales.filter(m => m.estado === 'incompleto').length;
+    
+    if (incompletos > 0) {
+        avisoContainer.style.display = 'block';
+        avisoContainer.innerHTML = `
+            <div style="background:#ffebee; border-left:4px solid #f44336; padding:12px; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.2rem;">⚠️</span>
+                <div style="flex:1;">
+                    <strong>Atención:</strong> Esta estación tiene ${incompletos} material${incompletos !== 1 ? 'es' : ''} incompleto${incompletos !== 1 ? 's' : ''}.
+                    <span style="font-size:0.85rem; color:#666;"> Revisa los materiales antes de comenzar los montajes.</span>
+                </div>
+                <button onclick="document.getElementById('avisoMaterialesContainer').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">✕</button>
+            </div>
+        `;
+    } else {
+        avisoContainer.style.display = 'none';
+    }
+}
+
+
+// ==============================================
+// 17. MENSAJES INFORMATIVOS EN PESTAÑAS
+// ==============================================
+
+function mostrarMensajeMateriales() {
+    const container = document.getElementById('partsDetail');
+    if (!container) return;
+    
+    (async () => {
+        const estacionId = window.currentEstacionId;
+        if (!estacionId) return;
+        
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = estacionData.materiales || [];
+        const incompletos = materiales.filter(m => m.estado === 'incompleto').length;
+        
+        if (incompletos > 0) {
+            let mensajeDiv = document.getElementById('mensajeMaterialesInfo');
+            if (!mensajeDiv) {
+                mensajeDiv = document.createElement('div');
+                mensajeDiv.id = 'mensajeMaterialesInfo';
+                container.insertBefore(mensajeDiv, container.firstChild);
+            }
+            mensajeDiv.style.cssText = 'background:#ffebee; border-left:4px solid #f44336; padding:12px; margin-bottom:15px; border-radius:8px; display:flex; align-items:center; gap:10px;';
+            mensajeDiv.innerHTML = `
+                <span style="font-size:1.2rem;">⚠️</span>
+                <div style="flex:1;">
+                    <strong>Atención:</strong> Esta estación tiene ${incompletos} material${incompletos !== 1 ? 'es' : ''} incompleto${incompletos !== 1 ? 's' : ''}.
+                    <span style="font-size:0.85rem; color:#666;"> Revisa los materiales antes de comenzar los montajes.</span>
+                </div>
+                <button onclick="document.getElementById('mensajeMaterialesInfo').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">✕</button>
+            `;
+        }
+    })();
+}
+
+function mostrarMensajeCompleto() {
+    let avisoContainer = document.getElementById('avisoCompletoContainer');
+    if (!avisoContainer) {
+        avisoContainer = document.createElement('div');
+        avisoContainer.id = 'avisoCompletoContainer';
+        avisoContainer.style.cssText = 'margin-bottom:15px;';
+        const assembliesTab = document.getElementById('assembliesTab');
+        if (assembliesTab && assembliesTab.firstChild) {
+            assembliesTab.insertBefore(avisoContainer, assembliesTab.firstChild);
+        } else if (assembliesTab) {
+            assembliesTab.appendChild(avisoContainer);
+        }
+    }
+    
+    (async () => {
+        const estacionId = window.currentEstacionId;
+        if (!estacionId) return;
+        
+        const data = await cargarDatosFirebase('materiales_entregados');
+        const estacionData = data[estacionId] || { materiales: [] };
+        const materiales = estacionData.materiales || [];
+        const incompletos = materiales.filter(m => m.estado === 'incompleto').length;
+        
+        if (incompletos === 0 && materiales.length > 0) {
+            avisoContainer.style.display = 'block';
+            avisoContainer.innerHTML = `
+                <div style="background:#e8f5e9; border-left:4px solid #4caf50; padding:12px; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.2rem;">✅</span>
+                    <div style="flex:1;">
+                        <strong>Todo listo:</strong> Todos los materiales están completos. Puedes comenzar con los montajes.
+                    </div>
+                    <button onclick="document.getElementById('avisoCompletoContainer').style.display='none'" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">✕</button>
+                </div>
+            `;
+        } else {
+            avisoContainer.style.display = 'none';
+        }
+    })();
+}
+
+// Modificar showAssembliesTab
+const originalShowAssembliesTab = showAssembliesTab;
+showAssembliesTab = function() {
+    document.getElementById('tabAssembliesBtn').classList.add('active');
+    document.getElementById('tabFastenersBtn').classList.remove('active');
+    document.getElementById('tabPartsBtn').classList.remove('active');
+    
+    document.getElementById('assembliesTab').style.display = 'block';
+    document.getElementById('fastenersTab').style.display = 'none';
+    document.getElementById('partsTab').style.display = 'none';
+    
+    mostrarMensajeCompleto();
+};
+
+// Modificar showPartsTab
+const originalShowPartsTab = showPartsTab;
+showPartsTab = function() {
+    document.getElementById('tabAssembliesBtn').classList.remove('active');
+    document.getElementById('tabFastenersBtn').classList.remove('active');
+    document.getElementById('tabPartsBtn').classList.remove('active');
+    document.getElementById('tabPartsBtn').classList.add('active');
+    
+    document.getElementById('assembliesTab').style.display = 'none';
+    document.getElementById('fastenersTab').style.display = 'none';
+    document.getElementById('partsTab').style.display = 'block';
+    
+    cargarMaterialesEstacionSeleccionada();
+    mostrarMensajeMateriales();
+};
+
+
+// ==============================================
+// 18. SOLICITUDES DE MATERIAL
+// ==============================================
+
+function solicitarMaterial(estacionId, materialNombre, cantidadFaltante) {
+    const mensaje = `🔔 SOLICITUD DE MATERIAL\nEstación: ${estacionId}\nMaterial: ${materialNombre}\nCantidad faltante: ${cantidadFaltante} unidades\nFecha: ${new Date().toLocaleString()}`;
+    
+    console.log(mensaje);
+    
+    // Copiar al portapapeles
+    navigator.clipboard.writeText(mensaje);
+    alert(`✅ Solicitud copiada al portapapeles.\n\nPega y envía al encargado de almacén:\n${mensaje}`);
+    
+    // Guardar en Firebase como notificación
+    guardarSolicitudMaterial(estacionId, materialNombre, cantidadFaltante);
+}
+
+async function guardarSolicitudMaterial(estacionId, materialNombre, cantidadFaltante) {
+    const solicitud = {
+        estacionId: estacionId,
+        materialNombre: materialNombre,
+        cantidadFaltante: cantidadFaltante,
+        fecha: new Date().toISOString(),
+        estado: 'pendiente'
+    };
+    
+    await guardarFirebase('solicitudes_material', `solicitud_${Date.now()}`, solicitud);
+    console.log('✅ Solicitud guardada en Firebase');
+}
+
+async function cargarSolicitudes() {
+    const container = document.getElementById('solicitudesList');
+    if (!container) return;
+    
+    const solicitudes = await cargarDatosFirebase('solicitudes_material');
+    
+    if (!solicitudes || Object.keys(solicitudes).length === 0) {
+        container.innerHTML = '<div class="empty-state">📭 No hay solicitudes pendientes</div>';
+        return;
+    }
+    
+    let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    for (const [id, sol] of Object.entries(solicitudes)) {
+        html += `
+    <div class="list-item" style="border-left: 4px solid #ff9800;">
+        <div class="list-item-title">📢 ${sol.materialNombre}</div>
+        <div class="list-item-sub">
+            📍 Estación: ${sol.estacionId}<br>
+            ⚠️ Faltan: ${sol.cantidadFaltante} unidades<br>
+            📅 Fecha: ${new Date(sol.fecha).toLocaleString()}
+        </div>
+        <button onclick="marcarSolicitudAtendida('${id}', ${JSON.stringify(sol).replace(/"/g, '&quot;')})" style="margin-top:8px; padding:6px 12px; background:#4caf50; color:white; border:none; border-radius:15px; cursor:pointer; font-size:0.75rem;">
+            ✅ Marcar como atendida y reponer
+        </button>
+    </div>
+`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function marcarSolicitudAtendida(id, solicitud) {
+    if (!confirm('¿Marcar esta solicitud como atendida? Se abrirá el material para reponer la cantidad.')) return;
+    
+    // Eliminar la solicitud
+    await eliminarFirebase('solicitudes_material', id);
+    
+    // Abrir el panel de materiales y seleccionar la estación y material
+    const estacionId = solicitud.estacionId;
+    const materialNombre = solicitud.materialNombre;
+    
+    // Cambiar a la pestaña de materiales en admin
+    switchAdminTab('materiales', { currentTarget: document.querySelector('.admin-tab[onclick*="materiales"]') });
+    
+    // Esperar a que cargue el selector
+    setTimeout(async () => {
+        const selector = document.getElementById('selectorEstacionMateriales');
+        if (selector) {
+            selector.value = estacionId;
+            // Forzar el evento change
+            selector.dispatchEvent(new Event('change'));
+            
+            // Esperar a que carguen los materiales
+            setTimeout(() => {
+                // Buscar el material por nombre y seleccionarlo
+                const materialesList = document.getElementById('materialesList');
+                if (materialesList) {
+                    const items = materialesList.querySelectorAll('.list-item');
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        if (item.textContent.includes(materialNombre)) {
+                            item.click();
+                            break;
+                        }
+                    }
+                }
+                
+                // Mostrar mensaje
+                alert(`✅ Solicitud atendida.\n\nMaterial "${materialNombre}" abierto para reponer.\nActualiza la cantidad entregada y guarda.`);
+            }, 500);
+        }
+    }, 500);
+    
+    await cargarSolicitudes();
+    
+    const indicator = document.getElementById('saveIndicator');
+    if (indicator) {
+        indicator.classList.remove('hidden');
+        setTimeout(() => indicator.classList.add('hidden'), 1500);
+    }
+}
+
+
+function inicializarPanelSolicitudes() {
+    cargarSolicitudes();
+}
+
+
+
+// ==============================================
+// 20. TOGGLE
+// ==============================================
+
+function toggleCamposEscaneo() {
+    const requiere = document.getElementById('materialRequiereEscaneo').value === 'true';
+    const campoEscaneos = document.getElementById('campoEscaneos');
+    if (campoEscaneos) {
+        campoEscaneos.style.display = requiere ? 'block' : 'none';
+    }
+}
+
+
+// ==============================================
+// 20. REGISTRO DE ESCANEOS (TABLA ADMIN)
+// ==============================================
+
+async function cargarRegistroEscaneos() {
+    const container = document.getElementById('registroEscaneosList');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="empty-state">⏳ Cargando registros...</div>';
+    
+    try {
+        const estaciones = await cargarDatosFirebase('estaciones');
+        const materialesData = await cargarDatosFirebase('materiales_entregados');
+        const filtroEstacion = document.getElementById('filtroEstacionEscaneos')?.value || '';
+        
+        // Rellenar selector de estaciones
+        const selectorEstacion = document.getElementById('filtroEstacionEscaneos');
+        if (selectorEstacion && selectorEstacion.options.length <= 1) {
+            for (const [id, estacion] of Object.entries(estaciones)) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${estacion.nombre} (${estacion.modelo})`;
+                selectorEstacion.appendChild(option);
+            }
+        }
+        
+        // Recopilar todos los escaneos
+        let todosLosEscaneos = [];
+        
+        for (const [estacionId, estacionData] of Object.entries(materialesData)) {
+            if (filtroEstacion && estacionId !== filtroEstacion) continue;
+            
+            const nombreEstacion = estaciones[estacionId]?.nombre || estacionId;
+            const materiales = estacionData.materiales || [];
+            
+            for (let i = 0; i < materiales.length; i++) {
+                const material = materiales[i];
+                if (material.requiereEscaneo && material.serialNumbers?.length > 0) {
+                    for (let j = 0; j < material.serialNumbers.length; j++) {
+                        const codigo = material.serialNumbers[j];
+                        const posicion = material.posicionesRequeridas?.find(p => p.codigo === codigo);
+                        
+                        todosLosEscaneos.push({
+                            estacionId: estacionId,
+                            estacionNombre: nombreEstacion,
+                            materialNombre: material.nombre,
+                            materialIndex: i,
+                            codigo: codigo,
+                            posicion: posicion?.posicion || '-',
+                            fecha: material.fechasEscaneo?.[j] || material.actualizado || '-',
+                            escaneoCompletado: material.escaneoCompletado,
+                            verificado: material.verificado
+                        });
+                    }
+                }
+            }
+        }
+        
+        if (todosLosEscaneos.length === 0) {
+            container.innerHTML = '<div class="empty-state">📭 No hay códigos escaneados aún</div>';
+            return;
+        }
+        
+        // Ordenar por fecha (más reciente primero)
+        todosLosEscaneos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        
+        // Generar tabla HTML
+        let html = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:var(--primary); color:white; position:sticky; top:0;">
+                            <th style="padding:10px; text-align:left;">📅 Fecha</th>
+                            <th style="padding:10px; text-align:left;">📍 Estación</th>
+                            <th style="padding:10px; text-align:left;">📦 Material</th>
+                            <th style="padding:10px; text-align:left;">🔢 Código escaneado</th>
+                            <th style="padding:10px; text-align:left;">📌 Ubicación</th>
+                            <th style="padding:10px; text-align:center;">✅ Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        for (const item of todosLosEscaneos) {
+            const estadoIcon = item.escaneoCompletado ? '✅ Completo' : '⏳ Incompleto';
+            const estadoColor = item.escaneoCompletado ? '#4caf50' : '#ff9800';
+            
+            html += `
+                <tr style="border-bottom:1px solid var(--border);">
+               <td style="padding:10px; font-size:0.75rem;">${new Date(item.fecha).toLocaleString()}</td><td style="padding:10px;">${item.estacionNombre}</td>
+                    <td style="padding:10px;">${item.materialNombre}</td>
+                    <td style="padding:10px; font-family:monospace;">${item.codigo}</td>
+                    <td style="padding:10px;">${item.posicion}</td>
+                    <td style="padding:10px; text-align:center;">
+                        <span style="background:${estadoColor}; color:white; padding:2px 8px; border-radius:12px; font-size:0.7rem;">
+                            ${estadoIcon}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top:15px; padding:10px; background:var(--bg-elevated); border-radius:8px;">
+                <strong>📊 Resumen:</strong> ${todosLosEscaneos.length} códigos escaneados en total
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando registro:', error);
+        container.innerHTML = '<div class="empty-state">❌ Error al cargar el registro</div>';
+    }
+}
+
+function exportarRegistroEscaneosCSV() {
+    const tabla = document.querySelector('#registroEscaneosList table');
+    if (!tabla) {
+        alert('No hay datos para exportar');
+        return;
+    }
+    
+    let csv = '';
+    const filas = tabla.querySelectorAll('tr');
+    
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('th, td');
+        const filaCSV = Array.from(celdas).map(celda => celda.innerText).join(',');
+        csv += filaCSV + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registro_escaneos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    alert('✅ Archivo CSV exportado correctamente');
+}
+
+function inicializarPanelRegistroEscaneos() {
+    cargarRegistroEscaneos();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
