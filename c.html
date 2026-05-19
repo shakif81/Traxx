@@ -1002,10 +1002,11 @@ function limpiarCodigoEscaneado(codigo) {
 
     
     
+
 window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
     console.log('Escáner iniciado', estacionId, materialIndex);
 
-    // Obtener el material actual
+    // Obtener material actual
     const data = await cargarDatosFirebase('materiales_entregados');
     const materiales = data[estacionId]?.materiales || [];
     const material = materiales[materialIndex];
@@ -1022,43 +1023,169 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         return;
     }
 
-    // Crear el contenedor del escáner con tamaño fijo
-    const scannerContainer = document.createElement('div');
-    scannerContainer.id = 'qr-scanner-container';
-    scannerContainer.style.cssText = `
+    // Variable para almacenar el último código detectado
+    let ultimoCodigoDetectado = null;
+
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.id = 'modalScanner';
+    modal.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: black;
-        z-index: 100000;
+        background: rgba(0,0,0,0.95);
+        z-index: 200000;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
     `;
-    
-    // El lector necesita un elemento con ID único
-    const readerId = 'html5qr-' + Date.now();
-    const readerDiv = document.createElement('div');
-    readerDiv.id = readerId;
-    readerDiv.style.cssText = 'width: 100%; height: 100%;';
-    scannerContainer.appendChild(readerDiv);
-    document.body.appendChild(scannerContainer);
 
-    const html5QrCode = new Html5Qrcode(readerId);
+    // Contenedor principal
+    const container = document.createElement('div');
+    container.style.cssText = `
+        width: 95%;
+        max-width: 500px;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    `;
 
-    // Función para procesar el código escaneado
-    const onScanSuccess = async (decodedText) => {
-        const codigoLimpio = limpiarCodigoEscaneado(decodedText);
+    // Header con información del material
+    const header = document.createElement('div');
+    header.style.cssText = `
+        background: #0077be;
+        color: white;
+        padding: 15px;
+        text-align: center;
+    `;
+    header.innerHTML = `<strong>${material.nombre}</strong><br>Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`;
+    container.appendChild(header);
+
+    // Área de video (cámara)
+    const videoContainer = document.createElement('div');
+    videoContainer.style.cssText = `
+        position: relative;
+        width: 100%;
+        background: black;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    const video = document.createElement('video');
+    video.id = 'scanner-video';
+    video.style.cssText = 'width: 100%; height: auto; transform: scaleX(-1);';
+    videoContainer.appendChild(video);
+    container.appendChild(videoContainer);
+
+    // Área de resultado (muestra el código detectado)
+    const resultDiv = document.createElement('div');
+    resultDiv.style.cssText = `
+        padding: 12px;
+        background: #f5f5f5;
+        text-align: center;
+        font-size: 14px;
+        font-family: monospace;
+        word-break: break-all;
+        border-bottom: 1px solid #ddd;
+    `;
+    resultDiv.innerHTML = '📷 Enfoca el código';
+    container.appendChild(resultDiv);
+
+    // Botones de acción
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        justify-content: center;
+        background: white;
+    `;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '✅ Confirmar código';
+    confirmBtn.style.cssText = `
+        flex: 1;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+    `;
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
+
+    const retryBtn = document.createElement('button');
+    retryBtn.textContent = '🔄 Reintentar / Otro código';
+    retryBtn.style.cssText = `
+        flex: 1;
+        background: #ff9800;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+    `;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '❌ Cancelar';
+    cancelBtn.style.cssText = `
+        flex: 1;
+        background: #f44336;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+    `;
+
+    buttonContainer.appendChild(confirmBtn);
+    buttonContainer.appendChild(retryBtn);
+    buttonContainer.appendChild(cancelBtn);
+    container.appendChild(buttonContainer);
+    modal.appendChild(container);
+    document.body.appendChild(modal);
+
+    let scanner = null;
+    let scannerActivo = true;
+
+    // Función para actualizar la interfaz con el código detectado
+    function actualizarCodigoDetectado(codigo) {
+        ultimoCodigoDetectado = codigo;
+        resultDiv.innerHTML = `🔍 Código detectado: <strong>${codigo}</strong><br>¿Es correcto? Presiona "Confirmar" para guardar.`;
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+    }
+
+    // Función para reiniciar la detección
+    function reiniciarDeteccion() {
+        ultimoCodigoDetectado = null;
+        resultDiv.innerHTML = '📷 Enfoca el código nuevamente';
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
+    }
+
+    // Función para guardar el código
+    async function guardarCodigo(codigo) {
+        const codigoLimpio = limpiarCodigoEscaneado(codigo);
         if (!codigoLimpio) {
-            alert('❌ Código no válido');
-            return;
+            resultDiv.innerHTML = '❌ Código no válido';
+            return false;
         }
         if (codigosEscaneados.includes(codigoLimpio)) {
-            alert(`⚠️ Código ya escaneado: ${codigoLimpio}`);
-            return;
+            resultDiv.innerHTML = `⚠️ Ya escaneado: ${codigoLimpio}`;
+            return false;
         }
 
         codigosEscaneados.push(codigoLimpio);
@@ -1083,44 +1210,59 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
 
         const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
         if (nuevosPendientes === 0) {
-            alert(`✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`);
-            await html5QrCode.stop();
-            scannerContainer.remove();
-            cargarMaterialesEstacionSeleccionada();
-            renderizarEstacionesArmario();
+            resultDiv.innerHTML = `✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`;
+            setTimeout(() => {
+                if (scanner) scanner.stop();
+                modal.remove();
+                cargarMaterialesEstacionSeleccionada();
+                renderizarEstacionesArmario();
+            }, 1500);
         } else {
-            alert(`✅ Registrado: ${codigoLimpio}\nProgreso: ${codigosEscaneados.length}/${cantidadRequerida}`);
+            resultDiv.innerHTML = `✅ Registrado: ${codigoLimpio}<br>📊 Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`;
+            header.innerHTML = `<strong>${material.nombre}</strong><br>Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`;
+            reiniciarDeteccion();
+        }
+        return true;
+    }
+
+    // Eventos de los botones
+    confirmBtn.onclick = async () => {
+        if (ultimoCodigoDetectado) {
+            await guardarCodigo(ultimoCodigoDetectado);
         }
     };
 
-    // Iniciar el escáner
+    retryBtn.onclick = () => {
+        reiniciarDeteccion();
+    };
+
+    cancelBtn.onclick = () => {
+        if (scanner) scanner.stop();
+        modal.remove();
+    };
+
+    // Iniciar Instascan
     try {
-        await html5QrCode.start(
-            { facingMode: 'environment' },  // cámara trasera
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            },
-            onScanSuccess,
-            (error) => console.log('Error de escaneo (ignorable):', error)
-        );
-        // Botón para cerrar
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '❌ Cerrar escáner';
-        closeBtn.style.cssText = 'position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#f44336; color:white; border:none; border-radius:30px; padding:10px 20px; font-size:16px; z-index:100001; cursor:pointer;';
-        closeBtn.onclick = () => {
-            html5QrCode.stop();
-            scannerContainer.remove();
-        };
-        scannerContainer.appendChild(closeBtn);
+        scanner = new Instascan.Scanner({ video: video, mirror: false, scanPeriod: 1 });
+        
+        scanner.addListener('scan', (content) => {
+            if (!scannerActivo) return;
+            if (!ultimoCodigoDetectado) {
+                actualizarCodigoDetectado(content);
+            }
+        });
+
+        const cameras = await Instascan.Camera.getCameras();
+        if (cameras.length === 0) {
+            throw new Error('No se encontró cámara');
+        }
+        const backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back') || cam.name.toLowerCase().includes('rear'));
+        await scanner.start(backCamera || cameras[0]);
     } catch (err) {
         console.error(err);
-        alert('No se pudo iniciar la cámara: ' + err.message);
-        scannerContainer.remove();
+        resultDiv.innerHTML = '❌ Error al iniciar cámara: ' + err.message;
     }
-};        
-
+};
 
 
 
