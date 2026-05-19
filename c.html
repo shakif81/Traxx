@@ -1003,10 +1003,10 @@ function limpiarCodigoEscaneado(codigo) {
     
     
 
-window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
+    
+    window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
     console.log('Escáner iniciado', estacionId, materialIndex);
 
-    // Obtener material actual
     const data = await cargarDatosFirebase('materiales_entregados');
     const materiales = data[estacionId]?.materiales || [];
     const material = materiales[materialIndex];
@@ -1023,12 +1023,10 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         return;
     }
 
-    // Variable para almacenar el último código detectado
     let ultimoCodigoDetectado = null;
 
-    // Crear modal
+    // Modal
     const modal = document.createElement('div');
-    modal.id = 'modalScanner';
     modal.style.cssText = `
         position: fixed;
         top: 0;
@@ -1043,7 +1041,6 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         justify-content: center;
     `;
 
-    // Contenedor principal
     const container = document.createElement('div');
     container.style.cssText = `
         width: 95%;
@@ -1054,101 +1051,37 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     `;
 
-    // Header con información del material
     const header = document.createElement('div');
-    header.style.cssText = `
-        background: #0077be;
-        color: white;
-        padding: 15px;
-        text-align: center;
-    `;
+    header.style.cssText = `background: #0077be; color: white; padding: 15px; text-align: center;`;
     header.innerHTML = `<strong>${material.nombre}</strong><br>Progreso: ${codigosEscaneados.length}/${cantidadRequerida}`;
     container.appendChild(header);
 
-    // Área de video (cámara)
-    const videoContainer = document.createElement('div');
-    videoContainer.style.cssText = `
-        position: relative;
-        width: 100%;
-        background: black;
-        min-height: 300px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    `;
-    const video = document.createElement('video');
-    video.id = 'scanner-video';
-    video.style.cssText = 'width: 100%; height: auto; transform: scaleX(-1);';
-    videoContainer.appendChild(video);
-    container.appendChild(videoContainer);
+    const readerDiv = document.createElement('div');
+    readerDiv.id = 'qr-reader-' + Date.now();
+    readerDiv.style.cssText = 'width: 100%; min-height: 300px; background: black;';
+    container.appendChild(readerDiv);
 
-    // Área de resultado (muestra el código detectado)
     const resultDiv = document.createElement('div');
-    resultDiv.style.cssText = `
-        padding: 12px;
-        background: #f5f5f5;
-        text-align: center;
-        font-size: 14px;
-        font-family: monospace;
-        word-break: break-all;
-        border-bottom: 1px solid #ddd;
-    `;
+    resultDiv.style.cssText = `padding: 12px; background: #f5f5f5; text-align: center; font-size: 14px;`;
     resultDiv.innerHTML = '📷 Enfoca el código';
     container.appendChild(resultDiv);
 
-    // Botones de acción
     const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
-        display: flex;
-        gap: 10px;
-        padding: 15px;
-        justify-content: center;
-        background: white;
-    `;
+    buttonContainer.style.cssText = `display: flex; gap: 10px; padding: 15px; justify-content: center; background: white;`;
 
     const confirmBtn = document.createElement('button');
     confirmBtn.textContent = '✅ Confirmar código';
-    confirmBtn.style.cssText = `
-        flex: 1;
-        background: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 30px;
-        padding: 12px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-    `;
+    confirmBtn.style.cssText = `flex:1; background:#4caf50; color:white; border:none; border-radius:30px; padding:12px; font-weight:bold; cursor:pointer;`;
     confirmBtn.disabled = true;
     confirmBtn.style.opacity = '0.5';
 
     const retryBtn = document.createElement('button');
-    retryBtn.textContent = '🔄 Reintentar / Otro código';
-    retryBtn.style.cssText = `
-        flex: 1;
-        background: #ff9800;
-        color: white;
-        border: none;
-        border-radius: 30px;
-        padding: 12px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-    `;
+    retryBtn.textContent = '🔄 Reintentar';
+    retryBtn.style.cssText = `flex:1; background:#ff9800; color:white; border:none; border-radius:30px; padding:12px; font-weight:bold; cursor:pointer;`;
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = '❌ Cancelar';
-    cancelBtn.style.cssText = `
-        flex: 1;
-        background: #f44336;
-        color: white;
-        border: none;
-        border-radius: 30px;
-        padding: 12px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-    `;
+    cancelBtn.style.cssText = `flex:1; background:#f44336; color:white; border:none; border-radius:30px; padding:12px; font-weight:bold; cursor:pointer;`;
 
     buttonContainer.appendChild(confirmBtn);
     buttonContainer.appendChild(retryBtn);
@@ -1157,18 +1090,9 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
     modal.appendChild(container);
     document.body.appendChild(modal);
 
-    let scanner = null;
-    let scannerActivo = true;
+    let html5QrCode = null;
+    let escaneoActivo = true;
 
-    // Función para actualizar la interfaz con el código detectado
-    function actualizarCodigoDetectado(codigo) {
-        ultimoCodigoDetectado = codigo;
-        resultDiv.innerHTML = `🔍 Código detectado: <strong>${codigo}</strong><br>¿Es correcto? Presiona "Confirmar" para guardar.`;
-        confirmBtn.disabled = false;
-        confirmBtn.style.opacity = '1';
-    }
-
-    // Función para reiniciar la detección
     function reiniciarDeteccion() {
         ultimoCodigoDetectado = null;
         resultDiv.innerHTML = '📷 Enfoca el código nuevamente';
@@ -1176,7 +1100,13 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         confirmBtn.style.opacity = '0.5';
     }
 
-    // Función para guardar el código
+    function actualizarCodigoDetectado(codigo) {
+        ultimoCodigoDetectado = codigo;
+        resultDiv.innerHTML = `🔍 Código detectado: <strong>${codigo}</strong><br>¿Es correcto? Presiona "Confirmar" para guardar.`;
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+    }
+
     async function guardarCodigo(codigo) {
         const codigoLimpio = limpiarCodigoEscaneado(codigo);
         if (!codigoLimpio) {
@@ -1198,7 +1128,6 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
             material.verificadoFecha = new Date().toLocaleString();
         }
 
-        // Guardar en Firebase
         const dataAct = await cargarDatosFirebase('materiales_entregados');
         const estacionDataAct = dataAct[estacionId] || { materiales: [] };
         let mats = estacionDataAct.materiales || [];
@@ -1212,7 +1141,7 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         if (nuevosPendientes === 0) {
             resultDiv.innerHTML = `✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`;
             setTimeout(() => {
-                if (scanner) scanner.stop();
+                if (html5QrCode) html5QrCode.stop();
                 modal.remove();
                 cargarMaterialesEstacionSeleccionada();
                 renderizarEstacionesArmario();
@@ -1225,44 +1154,32 @@ window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
         return true;
     }
 
-    // Eventos de los botones
     confirmBtn.onclick = async () => {
-        if (ultimoCodigoDetectado) {
-            await guardarCodigo(ultimoCodigoDetectado);
-        }
+        if (ultimoCodigoDetectado) await guardarCodigo(ultimoCodigoDetectado);
     };
-
-    retryBtn.onclick = () => {
-        reiniciarDeteccion();
-    };
-
+    retryBtn.onclick = reiniciarDeteccion;
     cancelBtn.onclick = () => {
-        if (scanner) scanner.stop();
+        if (html5QrCode) html5QrCode.stop();
         modal.remove();
     };
 
-    // Iniciar Instascan
     try {
-        scanner = new Instascan.Scanner({ video: video, mirror: false, scanPeriod: 1 });
-        
-        scanner.addListener('scan', (content) => {
-            if (!scannerActivo) return;
-            if (!ultimoCodigoDetectado) {
-                actualizarCodigoDetectado(content);
-            }
-        });
-
-        const cameras = await Instascan.Camera.getCameras();
-        if (cameras.length === 0) {
-            throw new Error('No se encontró cámara');
-        }
-        const backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back') || cam.name.toLowerCase().includes('rear'));
-        await scanner.start(backCamera || cameras[0]);
+        html5QrCode = new Html5Qrcode(readerDiv.id);
+        await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+                if (escaneoActivo && !ultimoCodigoDetectado) {
+                    actualizarCodigoDetectado(decodedText);
+                }
+            },
+            (error) => console.log('Error de escaneo (ignorable):', error)
+        );
     } catch (err) {
-        console.error(err);
         resultDiv.innerHTML = '❌ Error al iniciar cámara: ' + err.message;
     }
 };
+
 
 
 
