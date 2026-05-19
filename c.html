@@ -1003,10 +1003,6 @@ function limpiarCodigoEscaneado(codigo) {
     
     
 
-    
-    
-            
-
     window.abrirEscaneoMaterial = async function(estacionId, materialIndex) {
     console.log('Escáner iniciado', estacionId, materialIndex);
 
@@ -1026,7 +1022,8 @@ function limpiarCodigoEscaneado(codigo) {
         return;
     }
 
-    let ultimoCodigoDetectado = null;
+    let escaneoActivo = true;
+    let escanerActivo = true;
 
     // Modal a pantalla completa
     const modal = document.createElement('div');
@@ -1044,7 +1041,6 @@ function limpiarCodigoEscaneado(codigo) {
         justify-content: center;
     `;
 
-    // Contenedor interno (ocupa todo el espacio)
     const container = document.createElement('div');
     container.style.cssText = `
         width: 100%;
@@ -1054,7 +1050,6 @@ function limpiarCodigoEscaneado(codigo) {
         background: black;
     `;
 
-    // Header con información (compacto)
     const header = document.createElement('div');
     header.style.cssText = `
         background: #0077be;
@@ -1067,13 +1062,12 @@ function limpiarCodigoEscaneado(codigo) {
     header.innerHTML = `<strong>${material.nombre}</strong> | ${codigosEscaneados.length}/${cantidadRequerida}`;
     container.appendChild(header);
 
-    // Área de la cámara (ocupa todo el espacio disponible)
     const readerDiv = document.createElement('div');
-    readerDiv.id = 'qr-reader-' + Date.now();
+    const readerId = 'qr-reader-' + Date.now();
+    readerDiv.id = readerId;
     readerDiv.style.cssText = 'flex: 1; width: 100%; background: black;';
     container.appendChild(readerDiv);
 
-    // Área de resultado (compacta)
     const resultDiv = document.createElement('div');
     resultDiv.style.cssText = `
         padding: 8px 12px;
@@ -1087,7 +1081,6 @@ function limpiarCodigoEscaneado(codigo) {
     resultDiv.innerHTML = '📷 Enfoca el código';
     container.appendChild(resultDiv);
 
-    // Contenedor de botones (pequeños)
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
         display: flex;
@@ -1117,7 +1110,7 @@ function limpiarCodigoEscaneado(codigo) {
 
     const retryBtn = document.createElement('button');
     retryBtn.textContent = '🔄';
-    retryBtn.title = 'Reintentar / Otro código';
+    retryBtn.title = 'Reintentar';
     retryBtn.style.cssText = `
         background: #ff9800;
         color: white;
@@ -1153,74 +1146,111 @@ function limpiarCodigoEscaneado(codigo) {
     document.body.appendChild(modal);
 
     let html5QrCode = null;
-    let escaneoActivo = true;
 
-    function reiniciarDeteccion() {
-        ultimoCodigoDetectado = null;
+    async function reiniciarScanner() {
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+            } catch(e) { console.log(e); }
+        }
+        // Volver a iniciar
+        try {
+            await html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                (error) => console.log('Error de escaneo (ignorable):', error)
+            );
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
+    const onScanSuccess = async (decodedText) => {
+        if (!escanerActivo) return;
+        
+        // Mostrar el código detectado y habilitar confirmar
+        resultDiv.innerHTML = `🔍 Código: <strong>${decodedText}</strong> ✅`;
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        
+        // Guardar el código actual para confirmar
+        let codigoPendiente = decodedText;
+        
+        // Remover temporalmente el evento para evitar múltiples confirmaciones
+        const oldConfirmClick = confirmBtn.onclick;
+        
+        confirmBtn.onclick = async () => {
+            if (!escanerActivo) return;
+            
+            // Deshabilitar confirmar mientras se procesa
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            
+            const codigoLimpio = limpiarCodigoEscaneado(codigoPendiente);
+            if (!codigoLimpio) {
+                resultDiv.innerHTML = '❌ Código no válido';
+                return;
+            }
+            if (codigosEscaneados.includes(codigoLimpio)) {
+                resultDiv.innerHTML = `⚠️ Ya escaneado: ${codigoLimpio}`;
+                return;
+            }
+
+            // Guardar código
+            codigosEscaneados.push(codigoLimpio);
+            if (!material.fechasEscaneo) material.fechasEscaneo = [];
+            material.fechasEscaneo.push(new Date().toISOString());
+            material.serialNumbers = codigosEscaneados;
+            material.escaneoCompletado = codigosEscaneados.length >= cantidadRequerida;
+            if (material.escaneoCompletado && material.cantidadEntregada >= material.cantidadNecesaria) {
+                material.verificado = true;
+                material.verificadoFecha = new Date().toLocaleString();
+            }
+
+            // Guardar en Firebase
+            const dataAct = await cargarDatosFirebase('materiales_entregados');
+            const estacionDataAct = dataAct[estacionId] || { materiales: [] };
+            let mats = estacionDataAct.materiales || [];
+            mats[materialIndex] = material;
+            await guardarFirebase('materiales_entregados', estacionId, {
+                materiales: mats,
+                ultimaActualizacion: new Date().toISOString()
+            });
+
+            const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
+            
+            if (nuevosPendientes === 0) {
+                resultDiv.innerHTML = `✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`;
+                escanerActivo = false;
+                setTimeout(() => {
+                    if (html5QrCode) html5QrCode.stop();
+                    modal.remove();
+                    cargarMaterialesEstacionSeleccionada();
+                    renderizarEstacionesArmario();
+                }, 1500);
+            } else {
+                resultDiv.innerHTML = `✅ Registrado: ${codigoLimpio} (${codigosEscaneados.length}/${cantidadRequerida})`;
+                header.innerHTML = `<strong>${material.nombre}</strong> | ${codigosEscaneados.length}/${cantidadRequerida}`;
+                // Reiniciar scanner para el siguiente código
+                await reiniciarScanner();
+                // Limpiar mensaje y deshabilitar confirmar
+                resultDiv.innerHTML = '📷 Enfoca el siguiente código';
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.5';
+            }
+        };
+    };
+
+    confirmBtn.onclick = () => {}; // Temporal, se reemplazará en cada escaneo
+    retryBtn.onclick = async () => {
         resultDiv.innerHTML = '📷 Enfoca el código nuevamente';
         confirmBtn.disabled = true;
         confirmBtn.style.opacity = '0.5';
-    }
-
-    function actualizarCodigoDetectado(codigo) {
-        ultimoCodigoDetectado = codigo;
-        resultDiv.innerHTML = `🔍 Código: <strong>${codigo}</strong> ✅`;
-        confirmBtn.disabled = false;
-        confirmBtn.style.opacity = '1';
-    }
-
-    async function guardarCodigo(codigo) {
-        const codigoLimpio = limpiarCodigoEscaneado(codigo);
-        if (!codigoLimpio) {
-            resultDiv.innerHTML = '❌ Código no válido';
-            return false;
-        }
-        if (codigosEscaneados.includes(codigoLimpio)) {
-            resultDiv.innerHTML = `⚠️ Ya escaneado: ${codigoLimpio}`;
-            return false;
-        }
-
-        codigosEscaneados.push(codigoLimpio);
-        if (!material.fechasEscaneo) material.fechasEscaneo = [];
-        material.fechasEscaneo.push(new Date().toISOString());
-        material.serialNumbers = codigosEscaneados;
-        material.escaneoCompletado = codigosEscaneados.length >= cantidadRequerida;
-        if (material.escaneoCompletado && material.cantidadEntregada >= material.cantidadNecesaria) {
-            material.verificado = true;
-            material.verificadoFecha = new Date().toLocaleString();
-        }
-
-        const dataAct = await cargarDatosFirebase('materiales_entregados');
-        const estacionDataAct = dataAct[estacionId] || { materiales: [] };
-        let mats = estacionDataAct.materiales || [];
-        mats[materialIndex] = material;
-        await guardarFirebase('materiales_entregados', estacionId, {
-            materiales: mats,
-            ultimaActualizacion: new Date().toISOString()
-        });
-
-        const nuevosPendientes = cantidadRequerida - codigosEscaneados.length;
-        if (nuevosPendientes === 0) {
-            resultDiv.innerHTML = `✅ ¡COMPLETADO! (${codigosEscaneados.length}/${cantidadRequerida})`;
-            setTimeout(() => {
-                if (html5QrCode) html5QrCode.stop();
-                modal.remove();
-                cargarMaterialesEstacionSeleccionada();
-                renderizarEstacionesArmario();
-            }, 1500);
-        } else {
-            resultDiv.innerHTML = `✅ Registrado: ${codigoLimpio} (${codigosEscaneados.length}/${cantidadRequerida})`;
-            header.innerHTML = `<strong>${material.nombre}</strong> | ${codigosEscaneados.length}/${cantidadRequerida}`;
-            reiniciarDeteccion();
-        }
-        return true;
-    }
-
-    confirmBtn.onclick = async () => {
-        if (ultimoCodigoDetectado) await guardarCodigo(ultimoCodigoDetectado);
+        await reiniciarScanner();
     };
-    retryBtn.onclick = reiniciarDeteccion;
     cancelBtn.onclick = () => {
+        escanerActivo = false;
         if (html5QrCode) html5QrCode.stop();
         modal.remove();
     };
@@ -1230,18 +1260,17 @@ function limpiarCodigoEscaneado(codigo) {
         await html5QrCode.start(
             { facingMode: 'environment' },
             { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText) => {
-                if (escaneoActivo && !ultimoCodigoDetectado) {
-                    actualizarCodigoDetectado(decodedText);
-                }
-            },
+            onScanSuccess,
             (error) => console.log('Error de escaneo (ignorable):', error)
         );
     } catch (err) {
         resultDiv.innerHTML = '❌ Error al iniciar cámara: ' + err.message;
     }
 };
+    
+            
 
+                
 
 
 
