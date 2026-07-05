@@ -6675,33 +6675,40 @@ async function abrirEscannerComponente() {
         await window._html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 150 } },
-            (decodedText) => {
-                const limpio = limpiarCodigo(decodedText);
-                document.getElementById('resultadoEscaneoComponente').innerHTML = `
-                    <div style="background:#e8f5e9;padding:10px;border-radius:8px;">
-                        <strong>✅ ${limpio}</strong>
-                    </div>`;
-                asignarCodigoAComponente(limpio);
+       (decodedText) => {
+    // Evitar que el mismo código se asigne múltiples veces
+    if (window._escaneandoAhora) return;
+    window._escaneandoAhora = true;
+    
+    const limpio = limpiarCodigo(decodedText);
+    document.getElementById('resultadoEscaneoComponente').innerHTML = `
+        <div style="background:#e8f5e9;padding:10px;border-radius:8px;">
+            <strong>✅ ${limpio}</strong>
+        </div>`;
+    asignarCodigoAComponente(limpio);
 
-// Buscar el siguiente componente sin código
-const comps = window._componentesActuales || [];
-const siguiente = comps.findIndex((c, idx) => idx > window._escanearComponenteIndex && !c.codigo);
+    // Buscar el siguiente componente sin código
+    const comps = window._componentesActuales || [];
+    const siguiente = comps.findIndex((c, idx) => idx > (window._escanearComponenteIndex || 0) && !c.codigo);
 
-if (siguiente !== -1) {
-    // Escanear el siguiente
-    window._escanearComponenteIndex = siguiente;
-    toast('📷 Escanea ahora: ' + comps[siguiente].nombre);
-    // Reiniciar escáner para siguiente componente
-    setTimeout(() => {
-        document.getElementById('resultadoEscaneoComponente').innerHTML = '';
-    }, 500);
-} else {
-    // No hay más, cerrar
-    try { window._html5QrCode.stop(); } catch(e) {}
-    setTimeout(() => modal.remove(), 1000);
-    toast('✅ Todos los componentes escaneados');
-}
-            },
+    if (siguiente !== -1) {
+        window._escanearComponenteIndex = siguiente;
+        document.getElementById('resultadoEscaneoComponente').innerHTML = `
+            <div style="background:#fff8e1;padding:10px;border-radius:8px;">
+                <strong>📷 Ahora: ${comps[siguiente].nombre}</strong>
+            </div>`;
+        // Reactivar después de 1 segundo
+        setTimeout(() => {
+            window._escaneandoAhora = false;
+            document.getElementById('resultadoEscaneoComponente').innerHTML = '';
+        }, 1500);
+    } else {
+        try { window._html5QrCode.stop(); } catch(e) {}
+        setTimeout(() => modal.remove(), 1000);
+        toast('✅ Todos los componentes escaneados');
+        window._escaneandoAhora = false;
+    }
+},
             (errorMessage) => { /* ignorar */ }
         );
     } catch (err) {
