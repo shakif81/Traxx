@@ -6635,7 +6635,7 @@ async function abrirEscannerComponente() {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;';
     modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;text-align:center;">
-        <h3 style="color:var(--primary);margin-bottom:12px;">📷 Escanear componente</h3>
+        <h3 style="color:var(--primary);margin-bottom:12px;">📷 ${window._componentesActuales && window._escanearComponenteIndex !== undefined ? window._componentesActuales[window._escanearComponenteIndex]?.nombre || 'Componente' : 'Componente'}</h3>
         <div id="readerComponente" style="width:100%;border-radius:8px;overflow:hidden;"></div>
         <div style="margin-top:10px;display:flex;gap:8px;">
             <button id="btnManualComponente" class="btn btn-outline btn-sm" style="flex:1;">✏️ Meter manual</button>
@@ -6682,8 +6682,25 @@ async function abrirEscannerComponente() {
                         <strong>✅ ${limpio}</strong>
                     </div>`;
                 asignarCodigoAComponente(limpio);
-                if (window._html5QrCode) window._html5QrCode.stop();
-                setTimeout(() => modal.remove(), 1000);
+
+// Buscar el siguiente componente sin código
+const comps = window._componentesActuales || [];
+const siguiente = comps.findIndex((c, idx) => idx > window._escanearComponenteIndex && !c.codigo);
+
+if (siguiente !== -1) {
+    // Escanear el siguiente
+    window._escanearComponenteIndex = siguiente;
+    toast('📷 Escanea ahora: ' + comps[siguiente].nombre);
+    // Reiniciar escáner para siguiente componente
+    setTimeout(() => {
+        document.getElementById('resultadoEscaneoComponente').innerHTML = '';
+    }, 500);
+} else {
+    // No hay más, cerrar
+    try { window._html5QrCode.stop(); } catch(e) {}
+    setTimeout(() => modal.remove(), 1000);
+    toast('✅ Todos los componentes escaneados');
+}
             },
             (errorMessage) => { /* ignorar */ }
         );
@@ -6700,8 +6717,8 @@ function asignarCodigoAComponente(codigoLimpio) {
         const i = window._escanearComponenteIndex;
         window._componentesActuales[i].codigo = codigoLimpio;
         renderizarTablaComponentes();
-        window._escanearComponenteIndex = undefined;
-        toast('✅ Código asignado: ' + codigoLimpio);
+        // NO resetear el índice aquí, lo maneja el escáner
+        toast('✅ ' + window._componentesActuales[i].nombre + ': ' + codigoLimpio);
     }
 }
 
