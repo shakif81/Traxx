@@ -6628,9 +6628,20 @@ function renderizarTablaComponentes() {
         const inpCodigo = document.getElementById('codigo_' + i);
         const inpRevision = document.getElementById('revision_' + i);
         
-        if (inpCodigo) inpCodigo.onchange = function() { 
-            const limpio = limpiarCodigo(this.value);
-            const anterior = window._componentesActuales[i].codigo;
+if (inpCodigo) inpCodigo.onchange = function() { 
+    const limpio = limpiarCodigo(this.value);
+    const anterior = window._componentesActuales[i].codigo;
+    
+    // Validar duplicado
+    if (limpio && limpio !== anterior) {
+        const duplicado = window._componentesActuales.findIndex((c, j) => j !== i && c.codigo === limpio);
+        if (duplicado !== -1) {
+            alert(`⚠️ Código duplicado\nYa asignado a: ${window._componentesActuales[duplicado].nombre}`);
+            this.value = anterior || '';
+            return;
+        }
+    }
+    
             
             // 8. Bloquear sobrescritura en input directo
             if (anterior && limpio && anterior !== limpio) {
@@ -6750,9 +6761,18 @@ async function abrirEscannerComponente() {
         }
         
         const codigo = prompt('Código para ' + nombreComp + ':', comps[idx]?.codigo || '');
-        if (codigo !== null) {
-            const limpio = limpiarCodigo(codigo);
-            comps[idx].codigo = limpio;
+    if (codigo !== null) {
+        const limpio = limpiarCodigo(codigo);
+        
+        // Validar duplicado
+        const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
+        if (duplicado !== -1) {
+            alert(`⚠️ Código duplicado\nYa asignado a: ${comps[duplicado].nombre}`);
+            modal.remove();
+            return;
+        }
+        
+        comps[idx].codigo = limpio;
             renderizarTablaComponentes();
             actualizarProgresoComponentes();
             avanzarOContinuarRapido(idx, modal);
