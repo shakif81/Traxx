@@ -6694,8 +6694,21 @@ async function abrirEscannerComponente() {
     try {
         window._html5QrCode = new Html5Qrcode("readerComponente");
         await window._html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
+    { 
+        facingMode: "environment",
+        // Forzar enfoque
+        focusMode: "continuous",
+        exposureMode: "continuous",
+        whiteBalanceMode: "continuous"
+    },
+    { 
+        fps: 10, 
+        qrbox: { width: 250, height: 150 },
+        // Intentar enfoque avanzado
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        }
+    },
             (decodedText) => {
                 // Ignorar si ya se está procesando
                 if (window._procesandoEscaneo) return;
