@@ -6631,19 +6631,17 @@ function escanearComponente(index) {
 }
 
 function toggleLinterna() {
-    if (window._html5QrCode && window._html5QrCode._localMediaStream) {
-        const track = window._html5QrCode._localMediaStream.getVideoTracks()[0];
-        if (track) {
-            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            if (capabilities.torch) {
-                const estado = track.getSettings().torch;
-                track.applyConstraints({ advanced: [{ torch: !estado }] });
-                const btn = document.getElementById('btnLinterna');
-                if (btn) btn.textContent = !estado ? '🔦💡' : '🔦';
-            } else {
-                toast('⚠️ Linterna no disponible en este dispositivo');
-            }
-        }
+    const reader = document.getElementById('readerComponente');
+    if (!reader) return;
+    
+    const btn = document.getElementById('btnLinterna');
+    
+    if (reader.style.filter === 'brightness(3)') {
+        reader.style.filter = 'brightness(1)';
+        if (btn) btn.textContent = '🔦';
+    } else {
+        reader.style.filter = 'brightness(3)';
+        if (btn) btn.textContent = '🔦💡';
     }
 }
 
