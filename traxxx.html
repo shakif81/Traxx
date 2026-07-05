@@ -1422,7 +1422,6 @@ async function cargarMontajesOperacion(operacionId, modelo) {
     const semaforo = await cargarSemaforoHerramientas(operacionId);
     html += semaforo;
 
-
     for (const [estId, est] of estFiltradas) {
         const montajesEst = Object.entries(montajes)
             .filter(([mid, m]) => m.puntoId === estId && m.modelo === modelo)
@@ -1446,28 +1445,30 @@ async function cargarMontajesOperacion(operacionId, modelo) {
             const ss = String(seg % 60).padStart(2, '0');
             const tiempoFormato = `${hh}:${mm}:${ss}`;
 
-            return `<div class="assembly-card" id="card_${mid}" onclick="pulsarMontaje('${mid}','${(m.nombre||'').replace(/'/g,"\\'")}',${horas},'${estId}')" style="cursor:pointer;border:2px solid ${activo?'#4caf50':'var(--gray-200)'};margin-bottom:6px;">
+            return `
+            <div style="background:white;border:2px solid var(--gray-300);border-radius:10px;padding:10px;margin-bottom:8px;">
+                <div class="assembly-card" id="card_${mid}" onclick="pulsarMontaje('${mid}','${(m.nombre||'').replace(/'/g,"\\'")}',${horas},'${estId}')" style="cursor:pointer;border:2px solid ${activo?'#4caf50':'var(--gray-200)'};margin-bottom:4px;">
+                    <div class="assembly-header">
+                        <div class="assembly-icon">📦</div>
+                        <div class="assembly-title">
+                            <h3>${m.orden||''}. ${m.nombre||'Sin nombre'}${m.descripcion?` <span style="font-weight:400;font-size:0.75rem;color:var(--gray-600);">- ${m.descripcion}</span>`:''}</h3>
+                            <div id="crono_display_${mid}" style="font-family:monospace;font-size:0.75rem;font-weight:bold;color:${activo?'#2e7d32':'#607d8b'};">${activo?'⏳ '+segundosAHHMMSS(cs.tiempoRestanteSeg):'⏱️ '+tiempoFormato}</div>
+                        </div>
+                        <div style="text-align:right;margin-left:auto;">
+                            <div style="font-weight:600;font-size:0.85rem;">⏱️ ${horas.toFixed(2)}h</div>
+                        </div>
+                    </div>
+                </div>
                 ${m.nombre && m.nombre.toLowerCase().includes('resistencia') ? `
                 <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
-                    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirFormularioResistencias('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;" title="Rellenar resistencias">⚡ Rellenar</button>
+                    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirFormularioResistencias('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;">⚡ Rellenar</button>
                     <span id="resumenResistencias_${mid}" style="font-size:0.7rem;color:var(--gray-600);">⏳</span>
                 </div>` : ''}
                 ${m.requiereEscaneo ? `
-<div style="margin-top:6px;background:#f0f4ff;border-radius:8px;padding:8px;">
-    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirTablaEscaneo('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;">📷 Componentes</button>
-    <span id="resumenEscaneo_${mid}" style="font-size:0.65rem;color:var(--gray-600);margin-left:4px;"></span>
-</div>` : ''}
-         
-                <div class="assembly-header">
-                    <div class="assembly-icon">📦</div>
-                    <div class="assembly-title">
-                        <h3>${m.orden||''}. ${m.nombre||'Sin nombre'}${m.descripcion?` <span style="font-weight:400;font-size:0.75rem;color:var(--gray-600);">- ${m.descripcion}</span>`:''}</h3>
-                        <div id="crono_display_${mid}" style="font-family:monospace;font-size:0.75rem;font-weight:bold;color:${activo?'#2e7d32':'#607d8b'};">${activo?'⏳ '+segundosAHHMMSS(cs.tiempoRestanteSeg):'⏱️ '+tiempoFormato}</div>
-                    </div>
-                    <div style="text-align:right;margin-left:auto;">
-                        <div style="font-weight:600;font-size:0.85rem;">⏱️ ${horas.toFixed(2)}h</div>
-                    </div>
-                </div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
+                    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirTablaEscaneo('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;">📷 Componentes</button>
+                    <span id="resumenEscaneo_${mid}" style="font-size:0.65rem;"></span>
+                </div>` : ''}
             </div>`;
         }).join('');
         html += `</div>`;
@@ -6437,7 +6438,10 @@ async function abrirTablaEscaneo(montajeId, nombreMontaje) {
     <div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:700px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div>
-                <h3 style="margin:0;color:var(--primary);">📷 Componentes - ${nombreMontaje}</h3>
+                <div>
+    <h3 style="margin:0;color:var(--primary);">📷 Componentes - ${nombreMontaje}</h3>
+    <div id="progresoComponentes" style="font-size:0.75rem;color:var(--gray-600);margin-top:4px;"></div>
+</div>
                 <span style="font-size:0.75rem;color:var(--gray-600);">Escanea el código de cada componente</span>
             </div>
             <button id="btnCerrarModalComponentes" style="background:var(--danger);color:white;border:none;font-size:1.2rem;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">✕</button>
@@ -6482,6 +6486,7 @@ async function abrirTablaEscaneo(montajeId, nombreMontaje) {
 
     // Renderizar tabla
     renderizarTablaComponentes();
+    actualizarProgresoComponentes();
 
     // Cerrar modal
     document.getElementById('btnCerrarModalComponentes').onclick = () => {
@@ -6558,6 +6563,25 @@ async function abrirTablaEscaneo(montajeId, nombreMontaje) {
     };
 }
 
+function actualizarProgresoComponentes() {
+    const comps = window._componentesActuales || [];
+    const total = comps.length;
+    const conCodigo = comps.filter(c => c.codigo).length;
+    const conRevision = comps.filter(c => c.revision).length;
+
+    const div = document.getElementById('progresoComponentes');
+    if (!div) return;
+
+    const circulosCodigo = comps.map(c => c.codigo ? '🟢' : '⚪').join('');
+    const circulosRevision = comps.map(c => c.revision ? '🟣' : '⚪').join('');
+
+    div.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span>📷 ${circulosCodigo} ${conCodigo}/${total}</span>
+            <span>📝 ${circulosRevision} ${conRevision}/${total}</span>
+        </div>`;
+}
+
 function agregarComponenteEscaneo() {
     const nombre = document.getElementById('nuevoComponenteNombre').value.trim();
     if (!nombre) { alert('Escribe el nombre del componente'); return; }
@@ -6600,21 +6624,32 @@ function renderizarTablaComponentes() {
         </tr>
     `).join('');
 
-    // Asignar eventos
     comps.forEach((comp, i) => {
         const inpCodigo = document.getElementById('codigo_' + i);
         const inpRevision = document.getElementById('revision_' + i);
         
         if (inpCodigo) inpCodigo.onchange = function() { 
             const limpio = limpiarCodigo(this.value);
+            const anterior = window._componentesActuales[i].codigo;
+            
+            // 8. Bloquear sobrescritura en input directo
+            if (anterior && limpio && anterior !== limpio) {
+                if (!confirm(`⚠️ "${window._componentesActuales[i].nombre}" ya tiene: ${anterior}\n\n¿Sobrescribir con: ${limpio}?`)) {
+                    this.value = anterior;
+                    return;
+                }
+            }
+            
             window._componentesActuales[i].codigo = limpio;
             this.value = limpio;
             if (limpio) this.style.background = '#e8f5e9';
+            actualizarProgresoComponentes();
         };
         
         if (inpRevision) inpRevision.onchange = function() { 
             window._componentesActuales[i].revision = this.value;
             if (this.value) this.style.background = '#e8f5e9';
+            actualizarProgresoComponentes();
         };
     });
 }
@@ -6625,34 +6660,42 @@ function eliminarComponenteEscaneo(index) {
 }
 
 function escanearComponente(index) {
+    const comps = window._componentesActuales || [];
+    // 8. Bloquear si ya tiene código
+    if (comps[index] && comps[index].codigo) {
+        if (!confirm(`⚠️ "${comps[index].nombre}" ya tiene: ${comps[index].codigo}\n\n¿Sobrescribir?`)) {
+            return;
+        }
+    }
     window._escanearComponenteIndex = index;
-    window._escaneandoComponente = true;
+    window._modoRapido = false;
     abrirEscannerComponente();
 }
 
-function toggleLinterna() {
-    const reader = document.getElementById('readerComponente');
-    if (!reader) return;
-    
-    const btn = document.getElementById('btnLinterna');
-    
-    if (reader.style.filter === 'brightness(3)') {
-        reader.style.filter = 'brightness(1)';
-        if (btn) btn.textContent = '🔦';
-    } else {
-        reader.style.filter = 'brightness(3)';
-        if (btn) btn.textContent = '🔦💡';
-    }
-}
+
 
 async function abrirEscannerComponente() {
-    // Si ya hay un modal abierto, cerrarlo
     const existente = document.getElementById('modalEscannerComponente');
     if (existente) existente.remove();
     if (window._html5QrCode) { try { window._html5QrCode.stop(); } catch(e) {} }
 
     const idx = window._escanearComponenteIndex || 0;
     const comps = window._componentesActuales || [];
+    
+    // 8. Bloquear si ya tiene código al abrir la cámara
+    if (comps[idx] && comps[idx].codigo) {
+        if (!confirm(`⚠️ "${comps[idx].nombre}" ya tiene: ${comps[idx].codigo}\n\n¿Sobrescribir?`)) {
+            const siguiente = encontrarSiguienteSinCodigo(idx);
+            if (siguiente !== -1) {
+                window._escanearComponenteIndex = siguiente;
+                abrirEscannerComponente();
+            } else {
+                toast('✅ Todos los componentes ya tienen código');
+            }
+            return;
+        }
+    }
+    
     const nombreComp = comps[idx]?.nombre || 'Componente';
     
     const modal = document.createElement('div');
@@ -6661,11 +6704,10 @@ async function abrirEscannerComponente() {
     modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;text-align:center;">
         <h3 style="color:var(--primary);margin-bottom:8px;">📷 ${nombreComp}</h3>
-        <span style="font-size:0.75rem;color:var(--gray-600);">${idx + 1} de ${comps.length}</span>
+        <span style="font-size:0.75rem;color:var(--gray-600);">${idx + 1} de ${comps.length} ${window._modoRapido ? '· Modo rápido' : ''}</span>
         <div id="readerComponente" style="width:100%;border-radius:8px;overflow:hidden;min-height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;margin-top:8px;">⏳ Iniciando cámara...</div>
         <div style="margin-top:10px;display:flex;gap:8px;">
             <button id="btnManualComponente" class="btn btn-outline btn-sm" style="flex:1;">✏️ Manual</button>
-            <button id="btnLinterna" class="btn btn-outline btn-sm" style="flex:1;" onclick="toggleLinterna()">🔦</button>
             <button id="btnSaltarComponente" class="btn btn-outline btn-sm" style="flex:1;">⏭️ Saltar</button>
             <button id="btnCerrarComponente" class="btn btn-danger btn-sm" style="flex:1;">✕</button>
         </div>
@@ -6676,6 +6718,7 @@ async function abrirEscannerComponente() {
     // Cerrar
     document.getElementById('btnCerrarComponente').onclick = () => {
         if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
+        window._modoRapido = false;
         modal.remove();
     };
 
@@ -6688,20 +6731,31 @@ async function abrirEscannerComponente() {
             modal.remove();
             abrirEscannerComponente();
         } else {
+            window._modoRapido = false;
             modal.remove();
             toast('✅ Todos los componentes escaneados');
         }
     };
 
-    // Manual
+    // Manual con bloqueo
     document.getElementById('btnManualComponente').onclick = () => {
         if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
-        const codigo = prompt('Código para ' + nombreComp + ':');
-        if (codigo) {
+        
+        // 8. Bloquear si ya tiene código
+        if (comps[idx] && comps[idx].codigo) {
+            if (!confirm(`⚠️ "${nombreComp}" ya tiene: ${comps[idx].codigo}\n\n¿Sobrescribir?`)) {
+                modal.remove();
+                return;
+            }
+        }
+        
+        const codigo = prompt('Código para ' + nombreComp + ':', comps[idx]?.codigo || '');
+        if (codigo !== null) {
             const limpio = limpiarCodigo(codigo);
             comps[idx].codigo = limpio;
             renderizarTablaComponentes();
-            avanzarAlSiguiente(idx, modal);
+            actualizarProgresoComponentes();
+            avanzarOContinuarRapido(idx, modal);
         } else {
             modal.remove();
         }
@@ -6713,26 +6767,26 @@ async function abrirEscannerComponente() {
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 150 } },
             (decodedText) => {
-                // Ignorar si ya se está procesando
                 if (window._procesandoEscaneo) return;
                 window._procesandoEscaneo = true;
                 
                 const limpio = limpiarCodigo(decodedText);
-
-// Validar duplicado
-const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
-if (duplicado !== -1) {
-    document.getElementById('resultadoEscaneoComponente').innerHTML = `
-        <div style="background:#fff5f5;padding:10px;border-radius:8px;">
-            <strong>⚠️ Código duplicado</strong><br>
-            <small>Ya asignado a: ${comps[duplicado].nombre}</small>
-        </div>`;
-    window._procesandoEscaneo = false;
-    return; // No asignar
-}
-
-comps[idx].codigo = limpio;
+                
+                // 6. Validar duplicado
+                const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
+                if (duplicado !== -1) {
+                    document.getElementById('resultadoEscaneoComponente').innerHTML = `
+                        <div style="background:#fff5f5;padding:10px;border-radius:8px;">
+                            <strong>⚠️ Código duplicado</strong><br>
+                            <small>Ya asignado a: ${comps[duplicado].nombre}</small>
+                        </div>`;
+                    window._procesandoEscaneo = false;
+                    return;
+                }
+                
+                comps[idx].codigo = limpio;
                 renderizarTablaComponentes();
+                actualizarProgresoComponentes();
                 
                 document.getElementById('resultadoEscaneoComponente').innerHTML = `
                     <div style="background:#e8f5e9;padding:10px;border-radius:8px;">
@@ -6742,7 +6796,7 @@ comps[idx].codigo = limpio;
                 try { window._html5QrCode.stop(); } catch(e) {}
                 
                 setTimeout(() => {
-                    avanzarAlSiguiente(idx, modal);
+                    avanzarOContinuarRapido(idx, modal);
                     window._procesandoEscaneo = false;
                 }, 800);
             },
@@ -6762,6 +6816,24 @@ comps[idx].codigo = limpio;
 function encontrarSiguienteSinCodigo(desde) {
     const comps = window._componentesActuales || [];
     return comps.findIndex((c, idx) => idx > desde && !c.codigo);
+}
+
+function avanzarOContinuarRapido(idx, modal) {
+    if (window._modoRapido) {
+        // Modo rápido: siguiente automático sin cerrar
+        const siguiente = encontrarSiguienteSinCodigo(idx);
+        if (siguiente !== -1) {
+            window._escanearComponenteIndex = siguiente;
+            modal.remove();
+            setTimeout(() => abrirEscannerComponente(), 300);
+        } else {
+            window._modoRapido = false;
+            modal.remove();
+            toast('✅ Todos los componentes escaneados');
+        }
+    } else {
+        avanzarAlSiguiente(idx, modal);
+    }
 }
 
 function avanzarAlSiguiente(idx, modal) {
@@ -6813,8 +6885,18 @@ async function cargarResumenEscaneos() {
         if (guardado && guardado.componentes) {
             const total = guardado.componentes.length;
             const conCodigo = guardado.componentes.filter(c => c.codigo).length;
-            span.innerHTML = `${conCodigo}/${total} escaneados`;
-            span.style.color = conCodigo === total ? 'var(--success)' : 'var(--warning)';
+            const conRevision = guardado.componentes.filter(c => c.revision).length;
+            
+            if (conCodigo === total && conRevision === total) {
+                span.innerHTML = '✅ Completo';
+                span.style.color = 'var(--success)';
+            } else if (conCodigo > 0 || conRevision > 0) {
+                span.innerHTML = `📷 ${conCodigo}/${total} 📝 ${conRevision}/${total}`;
+                span.style.color = 'var(--warning)';
+            } else {
+                span.innerHTML = `📷 0/${total}`;
+                span.style.color = 'var(--gray-600)';
+            }
         }
     });
 }
