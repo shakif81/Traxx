@@ -6631,41 +6631,62 @@ function escanearComponente(index) {
 }
 
 async function abrirEscannerComponente() {
+    // Si ya hay un modal abierto, cerrarlo
+    const existente = document.getElementById('modalEscannerComponente');
+    if (existente) existente.remove();
+    if (window._html5QrCode) { try { window._html5QrCode.stop(); } catch(e) {} }
+
+    const idx = window._escanearComponenteIndex || 0;
+    const comps = window._componentesActuales || [];
+    const nombreComp = comps[idx]?.nombre || 'Componente';
+    
     const modal = document.createElement('div');
+    modal.id = 'modalEscannerComponente';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;';
     modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;text-align:center;">
-        <h3 style="color:var(--primary);margin-bottom:12px;">📷 ${window._componentesActuales && window._escanearComponenteIndex !== undefined ? window._componentesActuales[window._escanearComponenteIndex]?.nombre || 'Componente' : 'Componente'}</h3>
-        <div id="readerComponente" style="width:100%;border-radius:8px;overflow:hidden;"></div>
+        <h3 style="color:var(--primary);margin-bottom:8px;">📷 ${nombreComp}</h3>
+        <span style="font-size:0.75rem;color:var(--gray-600);">${idx + 1} de ${comps.length}</span>
+        <div id="readerComponente" style="width:100%;border-radius:8px;overflow:hidden;min-height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;margin-top:8px;">⏳ Iniciando cámara...</div>
         <div style="margin-top:10px;display:flex;gap:8px;">
-            <button id="btnManualComponente" class="btn btn-outline btn-sm" style="flex:1;">✏️ Meter manual</button>
-            <button id="btnCerrarComponente" class="btn btn-danger btn-sm" style="flex:1;">Cancelar</button>
+            <button id="btnManualComponente" class="btn btn-outline btn-sm" style="flex:1;">✏️ Manual</button>
+            <button id="btnSaltarComponente" class="btn btn-outline btn-sm" style="flex:1;">⏭️ Saltar</button>
+            <button id="btnCerrarComponente" class="btn btn-danger btn-sm" style="flex:1;">✕</button>
         </div>
         <div id="resultadoEscaneoComponente" style="margin-top:10px;font-size:0.9rem;"></div>
     </div>`;
     document.body.appendChild(modal);
 
+    // Cerrar
     document.getElementById('btnCerrarComponente').onclick = () => {
-        if (window._html5QrCode) {
-            window._html5QrCode.stop().then(() => modal.remove());
+        if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
+        modal.remove();
+    };
+
+    // Saltar al siguiente
+    document.getElementById('btnSaltarComponente').onclick = () => {
+        if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
+        const siguiente = encontrarSiguienteSinCodigo(idx);
+        if (siguiente !== -1) {
+            window._escanearComponenteIndex = siguiente;
+            modal.remove();
+            abrirEscannerComponente();
         } else {
             modal.remove();
+            toast('✅ Todos los componentes escaneados');
         }
     };
-    
-    // Cerrar con Escape
-    modal.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            if (window._html5QrCode) window._html5QrCode.stop();
-            modal.remove();
-        }
-    });
 
+    // Manual
     document.getElementById('btnManualComponente').onclick = () => {
-        const codigo = prompt('Introduce el código manualmente:');
+        if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
+        const codigo = prompt('Código para ' + nombreComp + ':');
         if (codigo) {
             const limpio = limpiarCodigo(codigo);
-            asignarCodigoAComponente(limpio);
+            comps[idx].codigo = limpio;
+            renderizarTablaComponentes();
+            avanzarAlSiguiente(idx, modal);
+        } else {
             modal.remove();
         }
     };
@@ -6675,47 +6696,54 @@ async function abrirEscannerComponente() {
         await window._html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 150 } },
-       (decodedText) => {
-    // Evitar que el mismo código se asigne múltiples veces
-    if (window._escaneandoAhora) return;
-    window._escaneandoAhora = true;
-    
-    const limpio = limpiarCodigo(decodedText);
-    document.getElementById('resultadoEscaneoComponente').innerHTML = `
-        <div style="background:#e8f5e9;padding:10px;border-radius:8px;">
-            <strong>✅ ${limpio}</strong>
-        </div>`;
-    asignarCodigoAComponente(limpio);
-
-    // Buscar el siguiente componente sin código
-    const comps = window._componentesActuales || [];
-    const siguiente = comps.findIndex((c, idx) => idx > (window._escanearComponenteIndex || 0) && !c.codigo);
-
-    if (siguiente !== -1) {
-        window._escanearComponenteIndex = siguiente;
-        document.getElementById('resultadoEscaneoComponente').innerHTML = `
-            <div style="background:#fff8e1;padding:10px;border-radius:8px;">
-                <strong>📷 Ahora: ${comps[siguiente].nombre}</strong>
-            </div>`;
-        // Reactivar después de 1 segundo
-        setTimeout(() => {
-            window._escaneandoAhora = false;
-            document.getElementById('resultadoEscaneoComponente').innerHTML = '';
-        }, 1500);
-    } else {
-        try { window._html5QrCode.stop(); } catch(e) {}
-        setTimeout(() => modal.remove(), 1000);
-        toast('✅ Todos los componentes escaneados');
-        window._escaneandoAhora = false;
-    }
-},
-            (errorMessage) => { /* ignorar */ }
+            (decodedText) => {
+                // Ignorar si ya se está procesando
+                if (window._procesandoEscaneo) return;
+                window._procesandoEscaneo = true;
+                
+                const limpio = limpiarCodigo(decodedText);
+                comps[idx].codigo = limpio;
+                renderizarTablaComponentes();
+                
+                document.getElementById('resultadoEscaneoComponente').innerHTML = `
+                    <div style="background:#e8f5e9;padding:10px;border-radius:8px;">
+                        <strong>✅ ${nombreComp}: ${limpio}</strong>
+                    </div>`;
+                
+                try { window._html5QrCode.stop(); } catch(e) {}
+                
+                setTimeout(() => {
+                    avanzarAlSiguiente(idx, modal);
+                    window._procesandoEscaneo = false;
+                }, 800);
+            },
+            (errorMessage) => {
+                if (errorMessage.includes('NotAllowedError') || errorMessage.includes('NotFoundError')) {
+                    document.getElementById('readerComponente').innerHTML = `
+                        <div style="color:var(--danger);padding:20px;">❌ Sin acceso a cámara</div>`;
+                }
+            }
         );
     } catch (err) {
-        document.getElementById('resultadoEscaneoComponente').innerHTML = `
-            <div style="background:#fff5f5;padding:10px;border-radius:8px;color:var(--danger);">
-                ❌ Error: ${err.message}
-            </div>`;
+        document.getElementById('readerComponente').innerHTML = `
+            <div style="color:var(--danger);padding:20px;">❌ ${err.message || 'Error'}</div>`;
+    }
+}
+
+function encontrarSiguienteSinCodigo(desde) {
+    const comps = window._componentesActuales || [];
+    return comps.findIndex((c, idx) => idx > desde && !c.codigo);
+}
+
+function avanzarAlSiguiente(idx, modal) {
+    const siguiente = encontrarSiguienteSinCodigo(idx);
+    if (siguiente !== -1) {
+        window._escanearComponenteIndex = siguiente;
+        modal.remove();
+        setTimeout(() => abrirEscannerComponente(), 300);
+    } else {
+        modal.remove();
+        toast('✅ Todos los componentes escaneados');
     }
 }
 
