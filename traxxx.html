@@ -6630,6 +6630,23 @@ function escanearComponente(index) {
     abrirEscannerComponente();
 }
 
+function toggleLinterna() {
+    if (window._html5QrCode && window._html5QrCode._localMediaStream) {
+        const track = window._html5QrCode._localMediaStream.getVideoTracks()[0];
+        if (track) {
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            if (capabilities.torch) {
+                const estado = track.getSettings().torch;
+                track.applyConstraints({ advanced: [{ torch: !estado }] });
+                const btn = document.getElementById('btnLinterna');
+                if (btn) btn.textContent = !estado ? '🔦💡' : '🔦';
+            } else {
+                toast('⚠️ Linterna no disponible en este dispositivo');
+            }
+        }
+    }
+}
+
 async function abrirEscannerComponente() {
     // Si ya hay un modal abierto, cerrarlo
     const existente = document.getElementById('modalEscannerComponente');
@@ -6650,6 +6667,7 @@ async function abrirEscannerComponente() {
         <div id="readerComponente" style="width:100%;border-radius:8px;overflow:hidden;min-height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999;margin-top:8px;">⏳ Iniciando cámara...</div>
         <div style="margin-top:10px;display:flex;gap:8px;">
             <button id="btnManualComponente" class="btn btn-outline btn-sm" style="flex:1;">✏️ Manual</button>
+            <button id="btnLinterna" class="btn btn-outline btn-sm" style="flex:1;" onclick="toggleLinterna()">🔦</button>
             <button id="btnSaltarComponente" class="btn btn-outline btn-sm" style="flex:1;">⏭️ Saltar</button>
             <button id="btnCerrarComponente" class="btn btn-danger btn-sm" style="flex:1;">✕</button>
         </div>
@@ -6702,7 +6720,20 @@ async function abrirEscannerComponente() {
                 window._procesandoEscaneo = true;
                 
                 const limpio = limpiarCodigo(decodedText);
-                comps[idx].codigo = limpio;
+
+// Validar duplicado
+const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
+if (duplicado !== -1) {
+    document.getElementById('resultadoEscaneoComponente').innerHTML = `
+        <div style="background:#fff5f5;padding:10px;border-radius:8px;">
+            <strong>⚠️ Código duplicado</strong><br>
+            <small>Ya asignado a: ${comps[duplicado].nombre}</small>
+        </div>`;
+    window._procesandoEscaneo = false;
+    return; // No asignar
+}
+
+comps[idx].codigo = limpio;
                 renderizarTablaComponentes();
                 
                 document.getElementById('resultadoEscaneoComponente').innerHTML = `
