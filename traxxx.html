@@ -121,6 +121,7 @@ body{background:#f8fafc;color:var(--gray-800);line-height:1.6;min-height:100vh}
    CRONÓMETRO FLOTANTE
    ============================================================ */
 .crono-badge-flotante{position:fixed;top:90px;right:20px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:white;padding:8px 14px;border-radius:30px;font-family:monospace;font-size:0.9rem;font-weight:bold;z-index:10000;box-shadow:0 4px 15px rgba(0,0,0,0.3);display:none;align-items:center;gap:8px;border:2px solid white}
+.crono-badge-flotante:hover{transform:scale(1.05);opacity:0.9;}
 .crono-badge-flotante.negativo{background:linear-gradient(135deg,#f44336,#d32f2f);animation:pulse-red 0.8s infinite}
 @keyframes pulse-red{0%,100%{opacity:1}50%{opacity:0.7}}
 
@@ -369,7 +370,8 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
             <button class="nav-item-dash admin-nav-item" data-admin-tab="tornilleria"><i class="fas fa-cog nav-icon-dash"></i>Tornillería</button>
             <button class="nav-item-dash admin-nav-item" data-admin-tab="inspeccion"><i class="fas fa-search nav-icon-dash"></i>Inspección</button>
           <button class="nav-item-dash admin-nav-item" data-admin-tab="escanner"><i class="fas fa-qrcode nav-icon-dash"></i>Escáner</button>
-  <button class="nav-item-dash admin-nav-item" data-admin-tab="catalogoComponentes"><i class="fas fa-microchip nav-icon-dash"></i>Componentes</button>
+  <button class="nav-item-dash admin-nav-item" data-admin-tab="configEscanner"><i class="fas fa-cog nav-icon-dash"></i>Config. Escáner</button>
+<button class="nav-item-dash admin-nav-item" data-admin-tab="catalogoComponentes"><i class="fas fa-microchip nav-icon-dash"></i>Componentes</button>
 <button class="nav-item-dash" onclick="cerrarSesion()" style="margin-top:1rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:1rem;color:var(--danger);">
                 <i class="fas fa-sign-out-alt nav-icon-dash"></i>Cerrar Sesión
             </button>
@@ -471,39 +473,19 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
                 <p class="page-subtitle">Resumen de producción</p>
             </div>
         </div>
-        <div class="stats-grid">
-            <div class="stat-card success">
-                <i class="fas fa-check-circle"></i>
-                <div class="stat-value" id="dashMontajesHoy">0</div>
-                <div class="stat-label">Montajes hoy</div>
-            </div>
-            <div class="stat-card info">
-                <i class="fas fa-clock"></i>
-                <div class="stat-value" id="dashTiempoHoy">00:00</div>
-                <div class="stat-label">Tiempo trabajado</div>
-            </div>
-            <div class="stat-card warning">
-                <i class="fas fa-percent"></i>
-                <div class="stat-value" id="dashEficienciaHoy">0%</div>
-                <div class="stat-label">Eficiencia</div>
-            </div>
-            <div class="stat-card danger">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div class="stat-value" id="dashPendientes">0</div>
-                <div class="stat-label">Pendientes</div>
-            </div>
-        </div>
-        <div class="panel">
-            <h3><i class="fas fa-chart-bar"></i> Rendimiento</h3>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr><th>Operario</th><th>Montajes</th><th>Tiempo real</th><th>Eficiencia</th></tr>
-                    </thead>
-                    <tbody id="tablaRendimiento"></tbody>
-                </table>
-            </div>
-        </div>
+    <div class="stats-grid">
+<div class="stat-card success"><i class="fas fa-check-circle"></i><div class="stat-value" id="dashMontajesHoy">0</div><div class="stat-label">Montajes hasta ahora</div></div>
+<div class="stat-card info"><i class="fas fa-clock"></i><div class="stat-value" id="dashTiempoTotalMontajes">00:00</div><div class="stat-label">Tiempo total montajes</div></div>
+<div class="stat-card warning"><i class="fas fa-hourglass-half"></i><div class="stat-value" id="dashPendientes">0</div><div class="stat-label">Pendientes</div></div>
+<div class="stat-card info"><i class="fas fa-user-clock"></i><div class="stat-value" id="dashTiempoHoy">00:00</div><div class="stat-label">Tiempo restante</div></div>
+</div>
+        
+        <div class="panel" style="margin-top:1rem;">
+    <h3><i class="fas fa-list-check"></i> Detalle por operación</h3>
+    <div id="detalleOperacionesDashboard" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="empty-state">Selecciona una operación para ver el detalle</div>
+    </div>
+</div>
     </div>
 
     <!-- HERRAMIENTAS -->
@@ -717,12 +699,20 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
                             <div class="form-group"><label>⏱️ Tiempo (horas)</label><input type="number" id="adminMontajeHoras" placeholder="0.5" step="0.01" min="0"></div>
                         </div>
                         <div class="form-group"><label>📝 Descripción</label><input type="text" id="adminMontajeDescripcion" placeholder="Descripción del montaje..."></div>
-                        <div class="form-group">
+                       <div class="form-group"><label>👤 Operario asignado</label>
+    <select id="adminMontajeOperarioAsignado">
+        <option value="">Sin asignar (todos)</option>
+        <option value="operario1">Operario 1</option>
+        <option value="operario2">Operario 2</option>
+    </select>
+</div>
+ <div class="form-group">
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="adminMontajeRequiereEscaneo" style="width:auto;">
+     <input type="checkbox" id="adminMontajeRequiereEscaneo" style="width:auto;" onchange="document.getElementById('configEscannerMontaje').style.display = this.checked ? 'block' : 'none'">
         📷 Este montaje requiere escaneo de componentes
     </label>
 </div>
+
                         <div class="form-group"><label>🔗 Depende de (montaje previo)</label><select id="adminMontajeDependeDe"><option value="">Ninguno</option></select></div>
                         <div class="form-group"><label>🔗 Piezas Kanban necesarias</label><div id="adminMontajeKanbanContainer" style="display:flex;flex-direction:column;gap:6px;"></div><button class="btn btn-outline btn-sm" onclick="agregarPiezaKanbanMontaje()" style="margin-top:6px;">➕ Añadir pieza</button></div>
                         <div class="form-group"><label>🔧 Pares requeridos (Nm)</label><div id="adminMontajeParesContainer" style="display:flex;flex-direction:column;gap:6px;"></div><button class="btn btn-outline btn-sm" onclick="agregarParRequerido()" style="margin-top:6px;">➕ Añadir par</button><small style="color:var(--gray-600);">Añade todos los pares necesarios para este montaje</small></div>
@@ -1017,16 +1007,60 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
 
 <div id="componentesAdminList"><div class="empty-state">Selecciona una operación</div></div>
 </div></div>
+<!-- PANEL CONFIGURACIÓN ESCÁNER -->
+<div class="admin-panel" id="adminPanelConfigEscanner" style="display:none;position:relative;clear:both;overflow:visible;">
+<div class="panel"><h3>⚙️ Configuración del Escáner</h3>
+
+<div class="form-group">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="configEscanerEliminarEspacios" style="width:auto;">
+        🧹 Eliminar todos los espacios
+    </label>
+</div>
+<div class="form-group">
+    <label>🔤 Caracteres a ELIMINAR</label>
+    <input type="text" id="configEscanerEliminar" placeholder="Ej: abc - #" autocomplete="off" autocorrect="off" spellcheck="false" oninput="probarConfigEscanner()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--gray-300);font-size:0.85rem;">
+    <small style="color:var(--gray-600);">Estos caracteres se borrarán del código escaneado</small>
+</div>
+
+<div class="form-group">
+    <label>📝 Conservar solo después de</label>
+    <input type="text" id="configEscanerDelimitador" placeholder="Ej: # (dejar vacío para no usar)" oninput="probarConfigEscanner()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--gray-300);font-size:0.85rem;">
+    <small style="color:var(--gray-600);">Si pones #, solo se conserva lo que hay después del último #</small>
+</div>
+
+<div class="form-group">
+    <label>✅ Conservar solo estos caracteres</label>
+    <input type="text" id="configEscanerConservar" placeholder="Ej: 0-9A-F (dejar vacío para conservar todo)" oninput="probarConfigEscanner()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--gray-300);font-size:0.85rem;">
+    <small style="color:var(--gray-600);">Ej: 0-9 solo números, A-F solo hexadecimal</small>
+</div>
+
+<div class="form-group" style="margin-top:12px;">
+    <label>🧪 Código de prueba</label>
+    <input type="text" id="configEscanerTestInput" placeholder="Escribe o pega un código de prueba..." oninput="probarConfigEscanner()" style="width:100%;padding:8px;border-radius:6px;border:2px solid var(--secondary);font-size:0.85rem;">
+</div>
+
+<div id="configEscannerPreview" style="margin-top:8px;padding:12px;background:var(--gray-50);border-radius:8px;font-size:0.9rem;text-align:center;">
+    <span style="color:var(--gray-600);">Resultado:</span><br>
+    <strong id="configEscannerResultado" style="font-size:1.2rem;color:var(--success);">—</strong>
+</div>
+<button class="btn btn-success btn-sm" onclick="guardarConfigEscanner()" style="width:100%;padding:10px;">💾 Guardar configuración</button>
+
+
+
+</div></div>
 
         </div><!-- /#admin -->
 
     </main>
 </div><!-- /#appContainer -->
 
+
+
 <!-- ============================================================
      CRONÓMETRO FLOTANTE
      ============================================================ -->
-<div class="crono-badge-flotante" id="cronoBadgeFlotante">
+<div class="crono-badge-flotante" id="cronoBadgeFlotante" onclick="irAlMontajeActivo()" style="cursor:pointer;" title="Ir al montaje en curso">
     <span>⏱️</span>
     <span id="cronoBadgeTiempo">00:00:00</span>
     <span id="cronoBadgeMontaje">-</span>
@@ -1050,6 +1084,7 @@ const firebaseConfig = {
 };
 window.db = null;
 window.isOnline = navigator.onLine;
+window._filtroOperario = null;
 
 function inicializarFirebase() {
     if (window.db) return window.db;
@@ -1119,16 +1154,8 @@ function toast(msg) {
 window.operarioActual = null;
 window.usuarioActual = null;
 window.operacionActiva = null;
-window.cronoState = {
-    activo: false,
-    montajeId: null,
-    montajeNombre: '',
-    estacionId: null,
-    tiempoTotalSeg: 0,
-    tiempoRestanteSeg: 0,
-    tiempoInicio: null,
-    intervalo: null
-};
+window.cronoState={}; 
+
 window.jornadaState = {
     activo: false,
     enPausa: false,
@@ -1358,7 +1385,80 @@ function accederSinOperario() {
     cargarOperaciones();
 }
 
-function cerrarSesion() {
+async function cerrarSesion() {
+    const cs = getCronoState();
+    
+    // Si hay un montaje en curso, preguntar qué hacer
+    if (cs && cs.activo && cs.montajeId) {
+        const resp = await new Promise(resolve => {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `
+            <div style="background:white;border-radius:16px;padding:24px;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="font-size:2rem;margin-bottom:8px;">⏱️</div>
+                <h3 style="color:var(--primary);margin-bottom:8px;">Montaje en curso</h3>
+                <p style="font-size:0.9rem;color:var(--gray-600);margin-bottom:4px;">
+                    <strong>${cs.montajeNombre}</strong>
+                </p>
+                <p style="font-size:0.8rem;color:var(--gray-600);margin-bottom:4px;">
+                    Tiempo restante: ${segundosAHHMMSS(cs.tiempoRestanteSeg)}
+                </p>
+                <p style="font-size:0.85rem;color:var(--gray-700);margin-bottom:12px;">
+                    ¿Qué quieres hacer antes de salir?
+                </p>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <button id="btnTerminarSalir" style="padding:12px;border:none;border-radius:10px;background:var(--success);color:white;font-weight:700;cursor:pointer;">
+                        ✅ Terminar montaje y salir
+                    </button>
+                    <button id="btnPausarSalir" style="padding:12px;border:none;border-radius:10px;background:var(--warning);color:white;font-weight:700;cursor:pointer;">
+                        ⏸️ Pausar montaje y salir
+                    </button>
+                    <button id="btnCancelarSalir" style="padding:10px;border:1px solid var(--gray-300);border-radius:10px;background:white;cursor:pointer;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+            
+            document.getElementById('btnTerminarSalir').onclick = () => { modal.remove(); resolve('terminar'); };
+            document.getElementById('btnPausarSalir').onclick = () => { modal.remove(); resolve('pausar'); };
+            document.getElementById('btnCancelarSalir').onclick = () => { modal.remove(); resolve('cancelar'); };
+        });
+        
+        if (resp === 'cancelar') return;
+        
+        if (resp === 'terminar') {
+        const puedeTerminar = await validarAntesDeTerminar(cs.montajeId);
+    if (!puedeTerminar) return;
+            // Liberar herramientas
+            for (const [hid, h] of Object.entries(window.herramientasCache || {})) {
+                if (h.estado === 'en_uso' && h.operario === window.operarioActual?.nombre) {
+                    await guardarFirebase('herramientas', hid, {
+                        estado: 'disponible', operario: '', fechaLiberacion: new Date().toISOString()
+                    });
+                    guardarFirebase('registro_herramientas', 'reg_' + Date.now(), {
+                        herramientaId: hid, numero: h.numero || '—', tipo: h.tipo || '—',
+                        categoria: h.categoria || 'manual', par: h.par || '', metrica: h.metrica || '',
+                        punta: h.punta || '', metricaTornillo: h.metricaTornillo || '', nSerie: h.nSerie || '—',
+                        montajeId: cs.montajeId, montajeNombre: cs.montajeNombre,
+                        operacionId: cs.operacionId || window.operacionActiva,
+                        operario: window.operarioActual?.nombre || 'Operario',
+                        fecha: new Date().toISOString()
+                    });
+                    window.herramientasCache[hid].estado = 'disponible';
+                    window.herramientasCache[hid].operario = '';
+                }
+            }
+            cerrarMontajeActivo(true);
+            toast('✅ Montaje terminado');
+        } else if (resp === 'pausar') {
+            guardarPausaCrono();
+            _detenerIntervaloCrono();
+            toast('⏸️ Montaje pausado');
+        }
+    }
+    
+    // Cerrar sesión
     window.operarioActual = null;
     document.getElementById('appContainer').style.display = 'none';
     document.getElementById('loginModal').style.display = 'flex';
@@ -1407,12 +1507,21 @@ async function seleccionarOperacion(id) {
 async function cargarMontajesOperacion(operacionId, modelo) {
     const container = document.getElementById('montajesOperacionList');
     container.innerHTML = '<div class="empty-state">⏳ Cargando...</div>';
-    const [montajes, estaciones] = await Promise.all([
+    const [montajes, estaciones, cronosPausadosData, historial] = await Promise.all([
         cargarDatosFirebase('montajes'),
-        cargarDatosFirebase('estaciones')
+        cargarDatosFirebase('estaciones'),
+        cargarDatosFirebase('cronos_pausados'),
+        cargarDatosFirebase('historial_montajes')
     ]);
     const estFiltradas = Object.entries(estaciones).filter(([id, e]) => e.modelo === modelo);
     let totalMontajes = 0, totalSeg = 0, html = '';
+
+    // IDs de montajes ya completados en esta operación
+    const completadosIds = new Set(
+        Object.values(historial || {})
+            .filter(h => h.completado && h.operacionId === operacionId)
+            .map(h => h.montajeId)
+    );
 
     // Cargar incidencias de inspección
     const incidencias = await cargarIncidenciasOperacion(operacionId);
@@ -1422,9 +1531,21 @@ async function cargarMontajesOperacion(operacionId, modelo) {
     const semaforo = await cargarSemaforoHerramientas(operacionId);
     html += semaforo;
 
+    // Filtro por operario
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+        <span style="font-weight:600;font-size:0.85rem;">👤 Filtrar por:</span>
+        <button class="btn btn-sm ${!window._filtroOperario ? 'btn-primary' : 'btn-outline'}" onclick="filtrarPorOperario(null)" style="font-size:0.7rem;">Todos</button>
+        <button class="btn btn-sm ${window._filtroOperario === 'operario1' ? 'btn-primary' : 'btn-outline'}" onclick="filtrarPorOperario('operario1')" style="font-size:0.7rem;">Operario 1</button>
+        <button class="btn btn-sm ${window._filtroOperario === 'operario2' ? 'btn-primary' : 'btn-outline'}" onclick="filtrarPorOperario('operario2')" style="font-size:0.7rem;">Operario 2</button>
+    </div>`;
+
     for (const [estId, est] of estFiltradas) {
         const montajesEst = Object.entries(montajes)
             .filter(([mid, m]) => m.puntoId === estId && m.modelo === modelo)
+            .filter(([mid, m]) => {
+                if (!window._filtroOperario) return true;
+                return m.operarioAsignado === window._filtroOperario;
+            })
             .sort((a, b) => (parseInt(a[1].orden) || 0) - (parseInt(b[1].orden) || 0));
         if (!montajesEst.length) continue;
         totalMontajes += montajesEst.length;
@@ -1436,8 +1557,15 @@ async function cargarMontajesOperacion(operacionId, modelo) {
         </div>`;
 
         html += montajesEst.map(([mid, m]) => {
-            const cs = window.cronoState;
-            const activo = cs.activo && cs.montajeId === mid;
+            const cs = getCronoState();
+            const activo = cs && cs.activo && cs.montajeId === mid;
+            const estaCompletado = completadosIds.has(mid);
+
+            // Buscar si este montaje está pausado
+            const pausadoKey = operacionId + '_' + mid;
+            const estaPausado = !activo && !estaCompletado && cronosPausadosData && cronosPausadosData[pausadoKey]?.pausado;
+            const tiempoPausado = estaPausado ? cronosPausadosData[pausadoKey]?.tiempoRestanteSeg : null;
+            
             const horas = parseFloat(m.tiempoHoras) || 0;
             const seg = Math.round(horas * 3600);
             const hh = String(Math.floor(seg / 3600)).padStart(2, '0');
@@ -1445,26 +1573,38 @@ async function cargarMontajesOperacion(operacionId, modelo) {
             const ss = String(seg % 60).padStart(2, '0');
             const tiempoFormato = `${hh}:${mm}:${ss}`;
 
+            const styleCompletado = estaCompletado ? 'opacity:0.6;border:2px solid var(--success);' : 
+                         estaPausado ? 'opacity:0.6;border:2px solid var(--warning);' : 
+                         activo ? 'border:3px solid var(--secondary);box-shadow:0 0 10px rgba(45,116,218,0.3);' :
+                         `border:2px solid var(--gray-200);`;
+
             return `
             <div style="background:white;border:2px solid var(--gray-300);border-radius:10px;padding:10px;margin-bottom:8px;">
-                <div class="assembly-card" id="card_${mid}" onclick="pulsarMontaje('${mid}','${(m.nombre||'').replace(/'/g,"\\'")}',${horas},'${estId}')" style="cursor:pointer;border:2px solid ${activo?'#4caf50':'var(--gray-200)'};margin-bottom:4px;">
+                <div class="assembly-card" id="card_${mid}" ${estaCompletado ? '' : `onclick="pulsarMontaje('${mid}','${(m.nombre||'').replace(/'/g,"\\'")}',${horas},'${estId}')"`} style="cursor:${estaCompletado ? 'default' : 'pointer'};${styleCompletado}margin-bottom:4px;">
                     <div class="assembly-header">
                         <div class="assembly-icon">📦</div>
                         <div class="assembly-title">
                             <h3>${m.orden||''}. ${m.nombre||'Sin nombre'}${m.descripcion?` <span style="font-weight:400;font-size:0.75rem;color:var(--gray-600);">- ${m.descripcion}</span>`:''}</h3>
-                            <div id="crono_display_${mid}" style="font-family:monospace;font-size:0.75rem;font-weight:bold;color:${activo?'#2e7d32':'#607d8b'};">${activo?'⏳ '+segundosAHHMMSS(cs.tiempoRestanteSeg):'⏱️ '+tiempoFormato}</div>
+                            <div id="crono_display_${mid}" style="font-family:monospace;font-size:0.75rem;font-weight:bold;color:${activo ? '#2e7d32' : estaPausado ? '#f59e0b' : '#607d8b'};">
+                                ${estaCompletado ? '✅ Completado' : activo && cs ? '⏳ ' + segundosAHHMMSS(cs.tiempoRestanteSeg) : estaPausado ? '⏸️ ' + segundosAHHMMSS(tiempoPausado) : '⏱️ ' + tiempoFormato}
+                            </div>
                         </div>
                         <div style="text-align:right;margin-left:auto;">
-                            <div style="font-weight:600;font-size:0.85rem;">⏱️ ${horas.toFixed(2)}h</div>
+                           ${estaCompletado ? 
+    '<span class="badge badge-success" style="font-size:0.7rem;">✅</span>' : 
+    estaPausado ?
+    '<span class="badge badge-warning" style="font-size:0.7rem;">⏸️</span>' :
+    `<div style="font-weight:600;font-size:0.85rem;">⏱️ ${horas.toFixed(2)}h</div>`
+}
                         </div>
                     </div>
                 </div>
-                ${m.nombre && m.nombre.toLowerCase().includes('resistencia') ? `
+                ${!estaCompletado && m.nombre && m.nombre.toLowerCase().includes('resistencia') ? `
                 <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
                     <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirFormularioResistencias('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;">⚡ Rellenar</button>
                     <span id="resumenResistencias_${mid}" style="font-size:0.7rem;color:var(--gray-600);">⏳</span>
                 </div>` : ''}
-                ${m.requiereEscaneo ? `
+                ${!estaCompletado && m.requiereEscaneo ? `
                 <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
                     <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();abrirTablaEscaneo('${mid}','${(m.nombre||'Sin nombre').replace(/'/g,"\\'")}')" style="font-size:0.65rem;padding:3px 8px;">📷 Componentes</button>
                     <span id="resumenEscaneo_${mid}" style="font-size:0.65rem;"></span>
@@ -1488,6 +1628,10 @@ function volverAOperaciones() {
     showPage('operaciones');
 }
 
+function filtrarPorOperario(operario) {
+    window._filtroOperario = operario;
+    cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
+}
 // ============================================================
 // 7. INSPECCIONES (INCIDENCIAS PERSONALIZADAS + CLOUDINARY)
 // ============================================================
@@ -2074,51 +2218,52 @@ async function cargarEstadoInspecciones() {
 // ============================================================
 async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
     const nombre = decodeURIComponent(nombreEnc);
-    const cs = window.cronoState;
+    const cs = getCronoState();
     const opId = window.operarioActual?.id || 'anonimo';
 
+    // ✅ Verificar si ya está completado
+    const historial = await cargarDatosFirebase('historial_montajes');
+    const yaCompletado = Object.values(historial).some(h => 
+        h.montajeId === montajeId && 
+        h.operacionId === window.operacionActiva && 
+        h.completado
+    );
+    if (yaCompletado) {
+        toast('✅ Este montaje ya fue completado');
+        return;
+    }
+
     // Si ya está activo este mismo montaje, no hacer nada
-    if (cs.activo && cs.montajeId === montajeId) return;
+    if (cs && cs.activo && cs.montajeId === montajeId) return;
 
     // Si hay otro montaje activo, preguntar qué hacer
-    if (cs.activo && cs.montajeId !== montajeId) {
-        const resp = await mostrarModalCambioMontaje(cs.montajeNombre, nombre);
-        if (resp === 'cancelar') return;
+if (cs && cs.activo && cs.montajeId !== montajeId) {
+    const resp = await mostrarModalCambioMontaje(cs.montajeNombre, nombre);
+   if (resp === 'cancelar') return;
 
-        if (resp === 'terminar') {
-            // Liberar herramientas del montaje anterior
+    if (resp === 'terminar') {
+        const puedeTerminar = await validarAntesDeTerminar(cs.montajeId);
+    if (!puedeTerminar) return;
             for (const [hid, h] of Object.entries(window.herramientasCache || {})) {
                 if (h.estado === 'en_uso' && h.operario === window.operarioActual?.nombre) {
                     await guardarFirebase('herramientas', hid, {
-                        estado: 'disponible',
-                        operario: '',
-                        fechaLiberacion: new Date().toISOString()
+                        estado: 'disponible', operario: '', fechaLiberacion: new Date().toISOString()
                     });
-
-                    // Guardar registro de liberación
                     guardarFirebase('registro_herramientas', 'reg_' + Date.now(), {
-                        herramientaId: hid,
-                        numero: h.numero || '—',
-                        tipo: h.tipo || '—',
-                        categoria: h.categoria || 'manual',
-                        par: h.par || '',
-                        metrica: h.metrica || '',
-                        punta: h.punta || '',
-                        metricaTornillo: h.metricaTornillo || '',
-                        nSerie: h.nSerie || '—',
-                        montajeId: cs.montajeId,
-                        montajeNombre: cs.montajeNombre,
-                        operacionId: window.operacionActiva,
-                        operario: window.operarioActual?.nombre || 'Operario',
+                        herramientaId: hid, numero: h.numero || '—', tipo: h.tipo || '—',
+                        categoria: h.categoria || 'manual', par: h.par || '', metrica: h.metrica || '',
+                        punta: h.punta || '', metricaTornillo: h.metricaTornillo || '', nSerie: h.nSerie || '—',
+                        montajeId: cs.montajeId, montajeNombre: cs.montajeNombre,
+                        operacionId: window.operacionActiva, operario: window.operarioActual?.nombre || 'Operario',
                         fecha: new Date().toISOString()
                     });
-
                     window.herramientasCache[hid].estado = 'disponible';
                     window.herramientasCache[hid].operario = '';
                 }
             }
             cerrarMontajeActivo(true);
         } else {
+            guardarPausaCrono();
             _detenerIntervaloCrono();
         }
     }
@@ -2136,11 +2281,9 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
         const opKey = window.operacionActiva + '_' + estId;
         const verifEstacion = verificaciones[opKey] || {};
         let noVerificados = [];
-
         for (const item of m.materialesNecesarios.split('||').filter(p => p)) {
             const partes = item.split('=');
-            const matId = partes[0];
-            const cantidad = partes[1] || '1';
+            const matId = partes[0]; const cantidad = partes[1] || '1';
             const mCat = catalogo[matId];
             const nombreMat = mCat ? mCat.nombre : decodeURIComponent(partes[2] || 'Material');
             const codigo = mCat ? mCat.codigo : (partes[3] ? decodeURIComponent(partes[3]) : '');
@@ -2148,7 +2291,6 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
                 noVerificados.push(`🔧 ${nombreMat}${codigo ? ' (' + codigo + ')' : ''}: ${cantidad} uds`);
             }
         }
-
         if (noVerificados.length > 0) {
             const ok = await new Promise(r => {
                 const d = document.createElement('div');
@@ -2156,10 +2298,7 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
                 d.innerHTML = `<div style="background:white;border-radius:16px;padding:24px;max-width:400px;text-align:center;">
                     <h3 style="color:var(--danger);">⚠️ Materiales sin verificar</h3>
                     <div style="text-align:left;background:#fff5f5;border-radius:10px;padding:12px;margin:12px 0;font-size:0.9rem;">${noVerificados.join('<br>')}</div>
-                    <div style="display:flex;gap:8px;">
-                        <button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--warning);color:white;font-weight:700;cursor:pointer;">▶️ Iniciar igual</button>
-                        <button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button>
-                    </div>
+                    <div style="display:flex;gap:8px;"><button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--warning);color:white;font-weight:700;cursor:pointer;">▶️ Iniciar igual</button><button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button></div>
                 </div>`;
                 document.body.appendChild(d);
                 document.getElementById('ok').onclick = () => { d.remove(); r(true); };
@@ -2174,7 +2313,6 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
         const piezas = await cargarDatosFirebase('piezas_kanban');
         const needed = m.piezasKanban.split(',').filter(p => p);
         let faltantes = [], descontar = [];
-
         for (const item of needed) {
             const [codigo, cantidad] = item.split('=').map(s => s.trim());
             const n = parseInt(cantidad) || 0;
@@ -2190,7 +2328,6 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
                 faltantes.push(`${codigo} (no encontrado)`);
             }
         }
-
         if (faltantes.length > 0) {
             const ok = await new Promise(r => {
                 const d = document.createElement('div');
@@ -2198,10 +2335,7 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
                 d.innerHTML = `<div style="background:white;border-radius:16px;padding:24px;max-width:400px;text-align:center;">
                     <h3 style="color:var(--danger);">⚠️ Piezas Kanban insuficientes</h3>
                     <div style="text-align:left;background:#fff5f5;border-radius:10px;padding:12px;margin:12px 0;font-size:0.9rem;">${faltantes.join('<br>')}</div>
-                    <div style="display:flex;gap:8px;">
-                        <button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--warning);color:white;font-weight:700;cursor:pointer;">▶️ Continuar</button>
-                        <button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button>
-                    </div>
+                    <div style="display:flex;gap:8px;"><button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--warning);color:white;font-weight:700;cursor:pointer;">▶️ Continuar</button><button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button></div>
                 </div>`;
                 document.body.appendChild(d);
                 document.getElementById('ok').onclick = () => { d.remove(); r(true); };
@@ -2209,7 +2343,6 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
             });
             if (!ok) return;
         }
-
         for (const d of descontar) {
             const nuevoStock = (d.p.stockActual || 0) - d.n;
             if (nuevoStock < 0) {
@@ -2220,22 +2353,16 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
                 stockActual: firebase.firestore.FieldValue.increment(-d.n)
             });
             guardarFirebase('movimientos_kanban', 'mov_' + Date.now(), {
-                piezaId: d.id,
-                piezaNombre: (d.p.nombre || 'Sin nombre') + ' (' + (d.p.codigo || '—') + ')',
-                cantidad: -d.n,
-                tipo: 'descuento',
-                operario: window.operarioActual?.nombre || 'Operario',
+                piezaId: d.id, piezaNombre: (d.p.nombre || 'Sin nombre') + ' (' + (d.p.codigo || '—') + ')',
+                cantidad: -d.n, tipo: 'descuento', operario: window.operarioActual?.nombre || 'Operario',
                 fecha: new Date().toISOString()
             });
             if (nuevoStock <= (d.p.stockCritico || 5)) {
                 guardarFirebase('solicitudes', 'sol_' + Date.now() + '_' + d.id, {
-                    tipo: 'kanban',
-                    piezaId: d.id,
+                    tipo: 'kanban', piezaId: d.id,
                     piezaNombre: (d.p.nombre || 'Sin nombre') + ' (' + (d.p.codigo || '—') + ')',
-                    stockActual: nuevoStock,
-                    operario: window.operarioActual?.nombre || 'Operario',
-                    estado: 'pendiente',
-                    fecha: new Date().toISOString()
+                    stockActual: nuevoStock, operario: window.operarioActual?.nombre || 'Operario',
+                    estado: 'pendiente', fecha: new Date().toISOString()
                 });
             }
         }
@@ -2250,81 +2377,54 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
             h.tipo === 'Llave Dinamométrica' &&
             pares.some(p => parseFloat(h.par) === p)
         );
-
         if (validas.length === 0) {
             alert(`⚠️ No hay herramientas para: ${pares.join(', ')} Nm`);
         } else {
             const sel = await new Promise(r => {
                 const d = document.createElement('div');
                 d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
-
                 const items = validas.map(([id, h]) => {
                     const esPropia = h.estado === 'en_uso' && h.operario === window.operarioActual?.nombre;
                     const esDisponible = h.estado === 'disponible' || !h.estado;
                     const esPrestable = h.estado === 'en_uso' && h.operario !== window.operarioActual?.nombre;
                     const disp = esDisponible || esPropia;
-
                     return `<label style="display:flex;align-items:center;gap:10px;padding:10px;background:${disp ? '#e8f5e9' : esPrestable ? '#fff8e1' : '#fff5f5'};border-radius:8px;margin-bottom:6px;cursor:${disp || esPrestable ? 'pointer' : 'default'};border:1px solid ${disp ? '#a5d6a7' : esPrestable ? '#ffcc02' : '#ef9a9a'};">
                         <input type="checkbox" value="${id}" data-prestable="${esPrestable}" ${disp ? 'checked' : ''} ${!disp && !esPrestable ? 'disabled' : ''}>
-                        <div style="flex:1;">
-                            <strong>🔧 #${h.numero || '—'} · ${h.par || '—'} Nm</strong><br>
-                            <small>SN:${h.nSerie || '—'} · ${esDisponible ? '📍 ' + (h.ubicacion || '—') : esPropia ? '👤 Ya la tienes tú' : esPrestable ? '👤 Usada por ' + (h.operario || '—') : '🔧 Taller calibración'}</small>
-                        </div>
+                        <div style="flex:1;"><strong>🔧 #${h.numero || '—'} · ${h.par || '—'} Nm</strong><br>
+                        <small>SN:${h.nSerie || '—'} · ${esDisponible ? '📍 ' + (h.ubicacion || '—') : esPropia ? '👤 Ya la tienes tú' : esPrestable ? '👤 Usada por ' + (h.operario || '—') : '🔧 Taller calibración'}</small></div>
                         ${!disp && esPrestable ? '<span class="badge badge-warning">Tomar prestada</span>' : !disp ? '<span class="badge badge-danger">No disponible</span>' : '<span class="badge badge-success">OK</span>'}
                     </label>`;
                 }).join('');
-
                 d.innerHTML = `<div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;">
-                    <h3>🔧 Seleccionar herramientas</h3>
-                    <p>Montaje: <b>${m.nombre}</b> | Pares: ${pares.join(', ')} Nm</p>
-                    ${items}
-                    <div style="display:flex;gap:8px;margin-top:16px;">
-                        <button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--success);color:white;font-weight:700;cursor:pointer;">✅ Iniciar</button>
-                        <button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button>
-                    </div>
+                    <h3>🔧 Seleccionar herramientas</h3><p>Montaje: <b>${m.nombre}</b> | Pares: ${pares.join(', ')} Nm</p>${items}
+                    <div style="display:flex;gap:8px;margin-top:16px;"><button id="ok" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--success);color:white;font-weight:700;cursor:pointer;">✅ Iniciar</button><button id="no" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:10px;background:white;cursor:pointer;">✕ Cancelar</button></div>
                 </div>`;
                 document.body.appendChild(d);
-
                 document.getElementById('ok').onclick = () => {
-                    const c = [];
-                    let prestadas = 0;
+                    const c = []; let prestadas = 0;
                     d.querySelectorAll('input:checked:not([disabled])').forEach(x => {
                         c.push(x.value);
                         if (x.dataset.prestable === 'true') prestadas++;
                     });
                     if (prestadas > 0) {
-                        if (!confirm(`⚠️ Vas a tomar ${prestadas} herramienta(s) prestada(s) de otro operario.\n\nSe le notificará y se devolverán al terminar tu montaje.\n\n¿Continuar?`)) {
-                            return;
-                        }
+                        if (!confirm(`⚠️ Vas a tomar ${prestadas} herramienta(s) prestada(s).\n\n¿Continuar?`)) return;
                     }
-                    d.remove();
-                    r(c);
+                    d.remove(); r(c);
                 };
                 document.getElementById('no').onclick = () => { d.remove(); r(null); };
             });
-
             if (sel === null) return;
-
             for (const hid of sel) {
                 const h = window.herramientasCache[hid];
                 if (h) {
-                    h.estado = 'en_uso';
-                    h.operario = window.operarioActual?.nombre || 'Operario';
+                    h.estado = 'en_uso'; h.operario = window.operarioActual?.nombre || 'Operario';
                     h.fechaReserva = new Date().toISOString();
                     await guardarFirebase('herramientas', hid, h);
-
                     guardarFirebase('registro_herramientas', 'reg_' + Date.now(), {
-                        herramientaId: hid,
-                        numero: h.numero || '—',
-                        tipo: h.tipo || '—',
-                        categoria: h.categoria || 'manual',
-                        par: h.par || '',
-                        metrica: h.metrica || '',
-                        nSerie: h.nSerie || '—',
-                        montajeId: montajeId,
-                        montajeNombre: m.nombre || 'Sin nombre',
-                        operacionId: window.operacionActiva,
-                        operario: window.operarioActual?.nombre || 'Operario',
+                        herramientaId: hid, numero: h.numero || '—', tipo: h.tipo || '—',
+                        categoria: h.categoria || 'manual', par: h.par || '', metrica: h.metrica || '',
+                        nSerie: h.nSerie || '—', montajeId: montajeId, montajeNombre: m.nombre || 'Sin nombre',
+                        operacionId: window.operacionActiva, operario: window.operarioActual?.nombre || 'Operario',
                         fecha: new Date().toISOString()
                     });
                 }
@@ -2332,24 +2432,115 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
         }
     }
 
-    // Iniciar cronómetro
-    const totalSeg = Math.round((parseFloat(horas) || 0) * 3600);
-    if (totalSeg <= 0) return;
+    // Recuperar pausa si existe
+    const clavePausa = window.operacionActiva + '_' + montajeId;
+    const cronosPausados = await cargarDatosFirebase('cronos_pausados');
+    const pausado = cronosPausados[clavePausa];
 
+    let totalSeg = Math.round((parseFloat(horas) || 0) * 3600);
+    if (pausado && pausado.pausado && pausado.tiempoRestanteSeg) {
+        totalSeg = pausado.tiempoRestanteSeg;
+        toast('⏱️ Recuperado: ' + segundosAHHMMSS(totalSeg));
+    }
+
+    if (totalSeg <= 0) return;
     cs.activo = true;
     cs.montajeId = montajeId;
     cs.montajeNombre = nombre;
     cs.estacionId = estacionId;
     cs.operarioId = opId;
+    cs.operacionId = window.operacionActiva;
     cs.tiempoTotalSeg = totalSeg;
     cs.tiempoRestanteSeg = totalSeg;
     cs.tiempoInicio = Date.now();
     cs.intervalo = setInterval(tickCrono, 1000);
     tickCrono();
+    // Actualizar vista local para mostrar el montaje en curso
+cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
+}
+
+
+async function guardarPausaCrono() {
+    const cs = getCronoState();
+    if (cs && cs.activo && cs.montajeId) {
+        await guardarFirebase('cronos_pausados', window.operacionActiva + '_' + cs.montajeId, {
+    operacionId: window.operacionActiva,
+    montajeId: cs.montajeId,
+    montajeNombre: cs.montajeNombre,
+    estacionId: cs.estacionId,
+    tiempoTotalSeg: cs.tiempoTotalSeg,
+    tiempoRestanteSeg: cs.tiempoRestanteSeg, // Ya está actualizado por tickCrono
+    operario: window.operarioActual?.nombre || 'Operario',
+    pausado: true,
+    fecha: new Date().toISOString()
+});
+    }
+}
+
+function getCronoState() {
+    const opId = window.operacionActiva;
+    if (!opId) return null;
+    if (!window.cronoState[opId]) {
+        window.cronoState[opId] = {
+            activo: false,
+            montajeId: null,
+            montajeNombre: '',
+            estacionId: null,
+            tiempoTotalSeg: 0,
+            tiempoRestanteSeg: 0,
+            tiempoInicio: null,
+            intervalo: null
+        };
+    }
+    return window.cronoState[opId];
+}
+
+// Nueva función: buscar cualquier crono activo
+function getCronoActivo() {
+    for (const [opId, cs] of Object.entries(window.cronoState || {})) {
+        if (cs.activo && cs.montajeId) {
+            return { opId, cs };
+        }
+    }
+    return null;
+}
+
+function irAlMontajeActivo() {
+    // Buscar cualquier crono activo
+    const activo = getCronoActivo();
+    if (!activo) {
+        toast('⏱️ No hay ningún montaje en curso');
+        return;
+    }
+    
+    const { opId, cs } = activo;
+    
+    // Ir a la operación del montaje activo
+    window.operacionActiva = opId;
+    
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('montajes-operacion').classList.add('active');
+    
+    seleccionarOperacion(opId);
+    
+    // Scroll al montaje
+    setTimeout(() => {
+        const card = document.getElementById('card_' + cs.montajeId);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.transition = 'all 0.3s';
+            card.style.boxShadow = '0 0 20px rgba(45,116,218,0.8)';
+            card.style.border = '3px solid var(--secondary)';
+            setTimeout(() => {
+                card.style.boxShadow = '';
+                card.style.border = '2px solid #4caf50';
+            }, 2000);
+        }
+    }, 800);
 }
 
 async function cerrarMontajeActivo(completo) {
-    const cs = window.cronoState;
+    const cs = getCronoState();
     const tiempoRealSeg = Math.floor((Date.now() - cs.tiempoInicio) / 1000);
     _detenerIntervaloCrono();
     if (!completo) return;
@@ -2366,6 +2557,7 @@ async function cerrarMontajeActivo(completo) {
         fecha: new Date().toISOString()
     });
 
+eliminarFirebase('cronos_pausados', window.operacionActiva + '_' + cs.montajeId);
     // Notificar dependencias
     setTimeout(async () => {
         const montajesDeps = await cargarDatosFirebase('montajes');
@@ -2425,7 +2617,7 @@ async function cerrarMontajeActivo(completo) {
 }
 
 function tickCrono() {
-    const cs = window.cronoState;
+    const cs = getCronoState();
     if (!cs.activo) return;
 
     const elapsed = Math.floor((Date.now() - cs.tiempoInicio) / 1000);
@@ -2451,14 +2643,17 @@ function tickCrono() {
 }
 
 function _detenerIntervaloCrono() {
-    const cs = window.cronoState;
+    const cs = getCronoState();
     clearInterval(cs.intervalo);
     cs.intervalo = null;
     cs.activo = false;
     document.getElementById('cronoBadgeFlotante').style.display = 'none';
 }
 
-function mostrarModalCambioMontaje(actual, nuevo) {
+async function mostrarModalCambioMontaje(actual, nuevo) {
+    const cs = getCronoState();
+    const puedeTerminar = cs ? await validarAntesDeTerminar(cs.montajeId) : true;
+    
     return new Promise(resolve => {
         const m = document.createElement('div');
         m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;';
@@ -2467,13 +2662,15 @@ function mostrarModalCambioMontaje(actual, nuevo) {
             <p>"${actual}" está corriendo.</p>
             <p>¿Qué haces antes de abrir "${nuevo}"?</p>
             <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px;">
-                <button id="btnTerminar" style="padding:10px;border:none;border-radius:10px;background:#4caf50;color:white;cursor:pointer;">✅ Terminar</button>
+                ${puedeTerminar ? `<button id="btnTerminar" style="padding:10px;border:none;border-radius:10px;background:#4caf50;color:white;cursor:pointer;">✅ Terminar</button>` : ''}
                 <button id="btnPausar" style="padding:10px;border:none;border-radius:10px;background:#ff9800;color:white;cursor:pointer;">⏸️ Pausar y cambiar</button>
                 <button id="btnCancelar" style="padding:8px;border:1px solid #ccc;border-radius:10px;background:transparent;cursor:pointer;">Cancelar</button>
             </div>
         </div>`;
         document.body.appendChild(m);
-        document.getElementById('btnTerminar').onclick = () => { m.remove(); resolve('terminar'); };
+        if (puedeTerminar) {
+            document.getElementById('btnTerminar').onclick = () => { m.remove(); resolve('terminar'); };
+        }
         document.getElementById('btnPausar').onclick = () => { m.remove(); resolve('pausar'); };
         document.getElementById('btnCancelar').onclick = () => { m.remove(); resolve('cancelar'); };
     });
@@ -2691,43 +2888,210 @@ async function mostrarDetalleMontaje(montajeId) {
 // ============================================================
 async function actualizarDashboard() {
     const hoy = new Date().toISOString().split('T')[0];
-    const historial = await cargarDatosFirebase('historial_montajes');
-    const montajesHoy = Object.values(historial).filter(h => {
-        const fh = new Date(h.fecha).toISOString().split('T')[0];
-        return fh === hoy && h.completado;
+    const operacionId = window.operacionActiva;
+
+    if (!operacionId) {
+        document.getElementById('dashMontajesHoy').textContent = '0';
+        document.getElementById('dashTiempoTotalMontajes').textContent = '00:00';
+        document.getElementById('dashPendientes').textContent = '0';
+        document.getElementById('dashTiempoHoy').textContent = '00:00';
+        return;
+    }
+
+    const [historial, montajes, ops] = await Promise.all([
+        cargarDatosFirebase('historial_montajes'),
+        cargarDatosFirebase('montajes'),
+        cargarDatosFirebase('operaciones')
+    ]);
+
+    const op = ops[operacionId];
+    const modelo = op ? op.modelo : 'MS3';
+
+    // Total de montajes de este modelo
+    const totalMontajesOperacion = Object.values(montajes).filter(m => m.modelo === modelo).length;
+
+    // Todos los montajes completados en esta operación (acumulado)
+    const completados = Object.values(historial).filter(h => 
+        h.completado && h.operacionId === operacionId
+    );
+
+    // 1. Montajes hasta ahora (acumulado)
+    document.getElementById('dashMontajesHoy').textContent = completados.length;
+
+    // 2. Tiempo total de montajes de la operación (estimado)
+    const tiempoTotal = Object.values(montajes)
+        .filter(m => m.modelo === modelo)
+        .reduce((a, m) => a + Math.round((parseFloat(m.tiempoHoras) || 0) * 3600), 0);
+    document.getElementById('dashTiempoTotalMontajes').textContent = segundosAHHMMSS(tiempoTotal);
+
+    // 3. Pendientes = total - completados
+    const pendientes = Math.max(0, totalMontajesOperacion - completados.length);
+    document.getElementById('dashPendientes').textContent = pendientes;
+
+// 4. Tiempo restante = Total estimado - Tiempo real de TODOS los operarios
+const cs = getCronoState();
+
+// Tiempo real de montajes completados hoy por TODOS los operarios en esta operación
+const montajesHoy = Object.values(historial).filter(h => {
+    const fh = new Date(h.fecha).toISOString().split('T')[0];
+    return fh === hoy && h.completado && h.operacionId === operacionId;
+});
+let tiempoRealTotal = montajesHoy.reduce((a, h) => a + (h.tiempoRealSeg || 0), 0);
+
+// Sumar tiempo del montaje en curso (de cualquier operario)
+if (cs.activo && cs.tiempoInicio) {
+    tiempoRealTotal += Math.floor((Date.now() - cs.tiempoInicio) / 1000);
+}
+
+// Tiempo restante = Total estimado - Tiempo real total
+const tiempoRestanteSeg = Math.max(0, tiempoTotal - tiempoRealTotal);
+document.getElementById('dashTiempoHoy').textContent = segundosAHHMMSS(tiempoRestanteSeg);
+
+// ✅ Color dinámico según % restante
+const pctRestante = tiempoTotal > 0 ? (tiempoRestanteSeg / tiempoTotal) * 100 : 0;
+const tiempoElement = document.getElementById('dashTiempoHoy');
+if (tiempoElement) {
+    if (pctRestante > 50) {
+        tiempoElement.style.color = 'var(--success)';
+    } else if (pctRestante > 25) {
+        tiempoElement.style.color = 'var(--warning)';
+    } else {
+        tiempoElement.style.color = 'var(--danger)';
+    }
+}
+// Cambiar color de fondo de la tarjeta de tiempo restante
+const statCard = document.getElementById('dashTiempoHoy')?.closest('.stat-card');
+if (statCard) {
+    statCard.classList.remove('success', 'warning', 'danger');
+    if (pctRestante > 50) {
+        statCard.classList.add('success');
+    } else if (pctRestante > 25) {
+        statCard.classList.add('warning');
+    } else {
+        statCard.classList.add('danger');
+    }
+}
+    cargarDetalleOperacionesDashboard();
+}
+
+async function cargarDetalleOperacionesDashboard() {
+    const container = document.getElementById('detalleOperacionesDashboard');
+    if (!container) return;
+    
+    const operacionId = window.operacionActiva;
+    if (!operacionId) {
+        container.innerHTML = '<div class="empty-state">Selecciona una operación para ver el detalle</div>';
+        return;
+    }
+
+    const [operaciones, montajes, historial, estaciones] = await Promise.all([
+        cargarDatosFirebase('operaciones'),
+        cargarDatosFirebase('montajes'),
+        cargarDatosFirebase('historial_montajes'),
+        cargarDatosFirebase('estaciones')
+    ]);
+
+    const op = operaciones[operacionId];
+    if (!op) {
+        container.innerHTML = '<div class="empty-state">Operación no encontrada</div>';
+        return;
+    }
+
+    const modelo = op.modelo || 'MS3';
+    
+    const montajesModelo = Object.entries(montajes)
+        .filter(([id, m]) => m.modelo === modelo)
+        .sort((a, b) => (parseInt(a[1].orden) || 0) - (parseInt(b[1].orden) || 0));
+
+    const completadosIds = new Set(
+        Object.values(historial)
+            .filter(h => h.completado && h.operacionId === operacionId)
+            .map(h => h.montajeId)
+    );
+
+    const total = montajesModelo.length;
+    const completados = montajesModelo.filter(([id, m]) => completadosIds.has(id)).length;
+    const pendientes = total - completados;
+    const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
+    const barraColor = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+
+    let html = `
+    <div class="panel" style="border-left:4px solid ${pct === 100 ? 'var(--success)' : 'var(--warning)'};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <h3 style="margin:0;">📋 ${op.numero || 'Sin número'} · ${op.modelo || 'MS3'}</h3>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-weight:700;font-size:0.9rem;">${completados}/${total}</span>
+                <span class="badge ${pct === 100 ? 'badge-success' : pendientes > 0 ? 'badge-warning' : 'badge-info'}">${pct}%</span>
+            </div>
+        </div>
+        <div style="background:#e0e0e0;border-radius:4px;height:8px;margin-bottom:10px;">
+            <div style="background:${barraColor};border-radius:4px;height:8px;width:${pct}%;transition:width 0.5s;"></div>
+        </div>
+        ${pendientes > 0 ? `<div style="font-size:0.75rem;color:var(--danger);margin-bottom:8px;">⚠️ ${pendientes} montaje(s) pendiente(s)</div>` : `<div style="font-size:0.75rem;color:var(--success);margin-bottom:8px;">✅ Todos los montajes completados</div>`}
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+
+    const porEstacion = {};
+    montajesModelo.forEach(([id, m]) => {
+        const estId = m.puntoId || 'sin-estacion';
+        if (!porEstacion[estId]) porEstacion[estId] = [];
+        porEstacion[estId].push({ id, ...m });
     });
 
-    const totalEst = montajesHoy.reduce((a, h) => a + (h.tiempoEstimadoSeg || 0), 0);
-    const totalReal = montajesHoy.reduce((a, h) => a + (h.tiempoRealSeg || 0), 0);
-    const ef = totalEst > 0 ? Math.round((totalEst / Math.max(totalReal, 1)) * 100) : 0;
+    // Ordenar estaciones por número (Estación 0, Estación 1, etc.)
+const estacionesOrdenadas = Object.entries(porEstacion).sort((a, b) => {
+    const numA = parseInt((estaciones[a[0]]?.nombre || a[0]).match(/(\d+)/)?.[0] || '99');
+    const numB = parseInt((estaciones[b[0]]?.nombre || b[0]).match(/(\d+)/)?.[0] || '99');
+    return numA - numB;
+});
 
-    document.getElementById('dashMontajesHoy').textContent = montajesHoy.length;
-    document.getElementById('dashEficienciaHoy').textContent = ef + '%';
+for (const [estId, monts] of estacionesOrdenadas) {
+    const est = estaciones[estId];
+    html += `<div style="margin-left:8px;margin-bottom:4px;">
+        <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:4px;">📍 ${est?.nombre || 'Sin estación'}</div>`;      
+        monts.forEach(m => {
+            const estaCompletado = completadosIds.has(m.id);
+            const tiempoEstimado = Math.round((parseFloat(m.tiempoHoras) || 0) * 3600);
+            
+            const historialMontaje = Object.values(historial).find(h => 
+                h.montajeId === m.id && h.operacionId === operacionId && h.completado
+            );
+            const tiempoReal = historialMontaje?.tiempoRealSeg || 0;
+            const operarioCompleto = historialMontaje?.operario || '';
+            
+            // ✅ Determinar si excedió el tiempo
+            const excedido = estaCompletado && tiempoReal > tiempoEstimado;
+            const diferencia = excedido ? tiempoReal - tiempoEstimado : 0;
+            const fondoFila = estaCompletado ? (excedido ? '#fff5f5' : '#f0fdf4') : '#fff5f5';
+            const bordeFila = estaCompletado ? (excedido ? '#ef9a9a' : '#a5d6a7') : '#ef9a9a';
 
-    const js = window.jornadaState;
-    if (js.activo) {
-        const ahora = new Date();
-        let seg = Math.floor((ahora - js.entradaTime) / 1000) - js.totalPausaSeg;
-        if (js.enPausa) seg = Math.floor((js.pausaInicioTime - js.entradaTime) / 1000) - js.totalPausaSeg;
-        document.getElementById('dashTiempoHoy').textContent = segundosAHHMMSS(Math.max(0, seg));
+            html += `
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:${fondoFila};border-radius:6px;margin-bottom:3px;border:1px solid ${bordeFila};">
+                <span>${estaCompletado ? (excedido ? '⚠️' : '✅') : '⏳'}</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;font-size:0.8rem;">${m.orden || ''}. ${m.nombre || 'Sin nombre'}</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">
+                        ⏱️ Est: ${segundosAHHMMSS(tiempoEstimado)}
+                        ${estaCompletado ? ` · Real: ${segundosAHHMMSS(tiempoReal)}` : ''}
+                        ${excedido ? ` <span style="color:var(--danger);font-weight:700;">⚠️ +${segundosAHHMMSS(diferencia)}</span>` : ''}
+                        ${estaCompletado && operarioCompleto ? ` · 👤 ${operarioCompleto}` : ''}
+                    </div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    ${estaCompletado ? 
+                        (excedido ? 
+                            `<span class="badge badge-danger" title="Excedió el tiempo estimado">⚠️ ${segundosAHHMMSS(tiempoReal)}</span>` : 
+                            `<span class="badge badge-success">✅ ${segundosAHHMMSS(tiempoReal)}</span>`
+                        ) : 
+                        `<span class="badge badge-warning">Pendiente</span>`
+                    }
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
     }
 
-    const ops = await cargarDatosFirebase('operarios');
-    const filas = [];
-    for (const [oid, o] of Object.entries(ops)) {
-        const mOp = montajesHoy.filter(h => h.operario === o.nombre);
-        const estOp = mOp.reduce((a, h) => a + (h.tiempoEstimadoSeg || 0), 0);
-        const realOp = mOp.reduce((a, h) => a + (h.tiempoRealSeg || 0), 0);
-        const efOp = estOp > 0 ? Math.round((estOp / Math.max(realOp, 1)) * 100) : 0;
-        const colorEf = efOp >= 90 ? 'badge-success' : efOp >= 70 ? 'badge-warning' : 'badge-danger';
-        filas.push(`<tr>
-            <td>${o.icono || '👤'} ${o.nombre}</td>
-            <td>${mOp.length}</td>
-            <td>${segundosAHHMMSS(realOp)}</td>
-            <td><span class="badge ${colorEf}">${efOp}%</span></td>
-        </tr>`);
-    }
-    document.getElementById('tablaRendimiento').innerHTML = filas.join('') || '<tr><td colspan="4">Sin datos</td></tr>';
+    html += `</div></div>`;
+    container.innerHTML = html;
 }
 
 // ============================================================
@@ -3027,7 +3391,7 @@ async function cargarDashboardHerramientas() {
                     </span>
                 </div>
                 ${estado === 'disponible' ? `
-                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();reservarHerramienta('${id}')" style="width:100%;margin-top:8px;font-size:0.7rem;padding:8px;">🔒 Reservar</button>
+                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();reservarHerramienta('${id}')" style="width:100%;margin-top:8px;font-size:0.7rem;padding:8px;">?? Reservar</button>
                 ` : estado === 'en_uso' && h.operario === window.operarioActual?.nombre ? `
                 <button class="btn btn-success btn-sm" onclick="event.stopPropagation();liberarHerramienta('${id}')" style="width:100%;margin-top:8px;font-size:0.7rem;padding:8px;">🔓 Liberar</button>
                 ` : ''}
@@ -4014,6 +4378,7 @@ async function switchAdminTab(tab) {
         'operaciones': '🔢 Operaciones',
         'inspeccion': '🔍 Inspección',
         'escanner': '📷 Escáner',
+        'configEscanner': '⚙️ Config. Escáner',
         'catalogoComponentes': '📷 Componentes',
         'montajes': '📦 Montajes',
         'kanban': '📦 Kanban',
@@ -4024,7 +4389,7 @@ async function switchAdminTab(tab) {
         'resistenciasAdmin': '⚡ Resistencias',
         'solicitudes': '📢 Solicitudes',
         'entregarMateriales': '📥 Entregar Materiales',
-        'tqc': '🔍 Control de Calidad',
+        'tqc': '?? Control de Calidad',
         'registroVerificaciones': '📋 Registro de Verificaciones',
         'registroHerramientas': '📜 Registro de Herramientas',
         'movimientosKanban': '📊 Movimientos Kanban'
@@ -4052,6 +4417,7 @@ async function switchAdminTab(tab) {
         'operaciones': 'adminPanelOperaciones',
         'inspeccion': 'adminPanelInspeccion',
         'escanner': 'adminPanelEscanner',
+        'configEscanner': 'adminPanelConfigEscanner',
         'catalogoComponentes': 'adminPanelCatalogoComponentes',
         'montajes': 'adminPanelMontajes',
         'tornilleria': 'adminPanelTornilleria',
@@ -4090,6 +4456,7 @@ async function switchAdminTab(tab) {
     if (tab === 'tornilleria') cargarAdminTornilleria();
     if (tab === 'inspeccion') cargarSelectorInspeccion();
   if (tab === 'escanner') { cargarSelectorOperacionesComponentes(); }
+  if (tab === 'configEscanner') cargarConfigEscanner();
   if (tab === 'catalogoComponentes') cargarCatalogoComponentes();
     if (tab === 'solicitudes') {
         const solicitudes = await cargarDatosFirebase('solicitudes');
@@ -4538,10 +4905,11 @@ async function cargarMontajesPorModelo() {
     if (!container) return;
     container.innerHTML = '<div class="empty-state">⏳ Cargando montajes...</div>';
 
-    const [montajes, estaciones] = await Promise.all([
-        cargarDatosFirebase('montajes'),
-        cargarDatosFirebase('estaciones')
-    ]);
+    const [montajes, estaciones, cronosPausadosData] = await Promise.all([
+    cargarDatosFirebase('montajes'),
+    cargarDatosFirebase('estaciones'),
+    cargarDatosFirebase('cronos_pausados')
+]);
 
     const estacionesModelo = Object.entries(estaciones)
         .filter(([id, e]) => e.modelo === modelo)
@@ -4600,7 +4968,9 @@ function editarMontajeAdmin(id) {
         document.getElementById('adminMontajeOrden').value = d.orden || '';
         document.getElementById('adminMontajeHoras').value = d.tiempoHoras || 0;
         document.getElementById('adminMontajeDescripcion').value = d.descripcion || '';
-        document.getElementById('adminMontajeRequiereEscaneo').checked = d.requiereEscaneo || false;
+      document.getElementById('adminMontajeOperarioAsignado').value = d.operarioAsignado || '';
+  document.getElementById('adminMontajeRequiereEscaneo').checked = d.requiereEscaneo || false;
+  
 cargarPiezasKanbanMontaje(d.piezasKanban || '');
         cargarMaterialesMontaje(d.materialesNecesarios || '');
         cargarSelectorDependencias(d.puntoId, d.dependeDe || '');
@@ -4629,7 +4999,9 @@ function mostrarFormNuevoMontajeModelo() {
     document.getElementById('adminMontajeOrden').value = '';
     document.getElementById('adminMontajeHoras').value = '';
     document.getElementById('adminMontajeDescripcion').value = '';
-    document.getElementById('adminMontajeRequiereEscaneo').checked = false;
+   document.getElementById('adminMontajeOperarioAsignado').value = '';
+ document.getElementById('adminMontajeRequiereEscaneo').checked = false;
+ 
 cargarPiezasKanbanMontaje('');
     cargarMaterialesMontaje('');
     cargarTornilleriaMontaje('');
@@ -4662,7 +5034,9 @@ async function guardarMontajeAdmin() {
         tiempoHoras: parseFloat(document.getElementById('adminMontajeHoras').value) || 0,
         icono: '📦',
         descripcion: document.getElementById('adminMontajeDescripcion').value.trim(),
-        requiereEscaneo: document.getElementById('adminMontajeRequiereEscaneo').checked,
+      operarioAsignado: document.getElementById('adminMontajeOperarioAsignado').value,
+  requiereEscaneo: document.getElementById('adminMontajeRequiereEscaneo').checked,
+  
 dependeDe: document.getElementById('adminMontajeDependeDe').value,
         piezasKanban: obtenerPiezasKanbanFormulario(),
         tornilleria: obtenerTornilleriaMontajeFormulario(),
@@ -6095,100 +6469,166 @@ async function cargarTQC() {
     if (!container) return;
     container.innerHTML = '<div class="empty-state">⏳ Cargando...</div>';
 
-    const [historial, estaciones, montajes] = await Promise.all([
-        cargarDatosFirebase('historial_montajes'),
-        cargarDatosFirebase('estaciones'),
-        cargarDatosFirebase('montajes')
+    const [solicitudes, estaciones] = await Promise.all([
+        cargarDatosFirebase('solicitudes'),
+        cargarDatosFirebase('estaciones')
     ]);
 
-    let arr = Object.entries(historial).filter(([id, h]) => h.completado && h.qcEstado);
-    if (opId) arr = arr.filter(([id, h]) => h.operacionId === opId);
-
+    let arr = Object.entries(solicitudes).filter(([id, s]) => s.tipo === 'tqc');
+    if (opId) arr = arr.filter(([id, s]) => s.operacionId === opId);
     arr.sort((a, b) => {
-        if (a[1].qcEstado === 'pendiente' && b[1].qcEstado !== 'pendiente') return -1;
-        if (a[1].qcEstado !== 'pendiente' && b[1].qcEstado === 'pendiente') return 1;
+        if (a[1].estado === 'pendiente' && b[1].estado !== 'pendiente') return -1;
+        if (a[1].estado !== 'pendiente' && b[1].estado === 'pendiente') return 1;
         return new Date(b[1].fecha) - new Date(a[1].fecha);
     });
 
-    const pendientes = arr.filter(([id, h]) => h.qcEstado === 'pendiente').length;
-    const badgeTQC = document.getElementById('badgeTQC');
-    if (badgeTQC) {
-        badgeTQC.textContent = pendientes;
-        badgeTQC.style.display = pendientes > 0 ? 'inline' : 'none';
-    }
-
     if (!arr.length) {
-        container.innerHTML = '<div class="empty-state">No hay montajes para revisar</div>';
+        container.innerHTML = '<div class="empty-state">No hay revisiones TQC pendientes</div>';
         return;
     }
 
-    let html = `<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-        <div style="background:#fff5f5;border-radius:10px;padding:10px 16px;text-align:center;flex:1;min-width:100px;">
-            <div style="font-size:1.5rem;font-weight:700;color:var(--danger);">${pendientes}</div>
-            <div style="font-size:0.7rem;">Pendientes</div>
-        </div>
-        <div style="background:#e8f5e9;border-radius:10px;padding:10px 16px;text-align:center;flex:1;min-width:100px;">
-            <div style="font-size:1.5rem;font-weight:700;color:var(--success);">${arr.length - pendientes}</div>
-            <div style="font-size:0.7rem;">Revisados</div>
-        </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;">`;
+    let html = '';
+    arr.forEach(([id, s]) => {
+        const estNombre = estaciones[s.estacionId]?.nombre || s.estacionId;
+        const esPendiente = s.estado === 'pendiente';
+        const fecha = new Date(s.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-    arr.forEach(([id, h]) => {
-        const estNombre = estaciones[h.estacionId]?.nombre || h.estacionId || '—';
-        const esPendiente = h.qcEstado === 'pendiente';
-        const fecha = new Date(h.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-        html += `<div style="background:${esPendiente ? '#fff5f5' : '#f0fdf4'};border-radius:12px;padding:14px;border-left:4px solid ${esPendiente ? 'var(--danger)' : 'var(--success)'};">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
-                <div style="flex:1;">
-                    <div style="font-weight:700;">📦 ${h.montajeNombre || 'Sin nombre'}</div>
-                    <div style="font-size:0.8rem;color:var(--gray-600);">👤 ${h.operario} · 📅 ${fecha} · 📍 ${estNombre}</div>
-                    <div style="font-size:0.8rem;color:var(--gray-600);">⏱️ Tiempo: ${segundosAHHMMSS(h.tiempoRealSeg || 0)}</div>
-                    ${h.qcComentario ? `<div style="margin-top:6px;background:#fef3c7;padding:8px;border-radius:6px;font-size:0.8rem;"><strong>📝 Comentario:</strong> ${h.qcComentario}</div>` : ''}
-                    ${h.qcRevisor ? `<div style="font-size:0.75rem;color:var(--success);margin-top:4px;">✅ Revisado por ${h.qcRevisor} el ${h.qcFecha ? new Date(h.qcFecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</div>` : ''}
+        html += `<div style="background:${esPendiente ? '#fff5f5' : '#f0fdf4'};border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid ${esPendiente ? 'var(--danger)' : 'var(--success)'};">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <strong>📍 ${estNombre}</strong>
+                    <div style="font-size:0.8rem;color:var(--gray-600);">👤 ${s.operario || '—'} · 📅 ${fecha}</div>
                 </div>
-                ${esPendiente ? `<div style="display:flex;gap:6px;">
-                    <button class="btn btn-success btn-sm" onclick="aprobarQC('${id}')">✅ Aprobar</button>
-                    <button class="btn btn-danger btn-sm" onclick="rechazarQC('${id}')">❌ Rechazar</button>
-                </div>` : `<span class="badge ${h.qcEstado === 'aprobado' ? 'badge-success' : 'badge-danger'}">${h.qcEstado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>`}
+                ${esPendiente ? `
+                <div style="display:flex;gap:6px;">
+                    <button class="btn btn-success btn-sm" onclick="aprobarTQC('${id}')">✅ Aprobar</button>
+                    <button class="btn btn-danger btn-sm" onclick="rechazarTQC('${id}')">❌ Rechazar</button>
+                </div>` : `<span class="badge ${s.estado === 'aprobado' ? 'badge-success' : 'badge-danger'}">${s.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>`}
             </div>
+            ${s.comentario ? `<div style="margin-top:6px;font-size:0.8rem;color:var(--gray-600);">📝 ${s.comentario}</div>` : ''}
+            ${s.revisor ? `<div style="font-size:0.7rem;color:var(--success);margin-top:4px;">✅ Revisado por ${s.revisor}</div>` : ''}
         </div>`;
     });
 
-    html += `</div>`;
     container.innerHTML = html;
 }
 
-async function aprobarQC(id) {
-    const historial = await cargarDatosFirebase('historial_montajes');
-    const h = historial[id];
-    if (!h) return;
-    await guardarFirebase('historial_montajes', id, {
-        ...h,
-        qcEstado: 'aprobado',
-        qcRevisor: window.operarioActual?.nombre || 'Admin',
-        qcFecha: new Date().toISOString()
+async function aprobarTQC(id) {
+    const solicitudes = await cargarDatosFirebase('solicitudes');
+    const s = solicitudes[id];
+    if (!s) return;
+    await guardarFirebase('solicitudes', id, {
+        ...s,
+        estado: 'aprobado',
+        revisor: window.operarioActual?.nombre || 'Admin',
+        fechaRevision: new Date().toISOString()
     });
+    // Notificar al operario
+    if (s.operario) {
+        await guardarFirebase('solicitudes', 'tqc_resp_' + Date.now(), {
+            tipo: 'tqc_respuesta',
+            piezaNombre: '✅ TQC APROBADO: ' + (estaciones[s.estacionId]?.nombre || s.estacionId),
+            operario: s.operario,
+            estado: 'no_leido',
+            fecha: new Date().toISOString()
+        });
+    }
     cargarTQC();
-    toast('✅ Montaje aprobado');
+    actualizarBadgeTQC();
+    toast('✅ TQC aprobado');
 }
 
-async function rechazarQC(id) {
+async function rechazarTQC(id) {
     const comentario = prompt('Motivo del rechazo:', '');
     if (comentario === null) return;
-    const historial = await cargarDatosFirebase('historial_montajes');
-    const h = historial[id];
-    if (!h) return;
-    await guardarFirebase('historial_montajes', id, {
-        ...h,
-        qcEstado: 'rechazado',
-        qcComentario: comentario,
-        qcRevisor: window.operarioActual?.nombre || 'Admin',
-        qcFecha: new Date().toISOString()
+    const solicitudes = await cargarDatosFirebase('solicitudes');
+    const s = solicitudes[id];
+    if (!s) return;
+    await guardarFirebase('solicitudes', id, {
+        ...s,
+        estado: 'rechazado',
+        comentario: comentario,
+        revisor: window.operarioActual?.nombre || 'Admin',
+        fechaRevision: new Date().toISOString()
     });
+    if (s.operario) {
+        await guardarFirebase('solicitudes', 'tqc_resp_' + Date.now(), {
+            tipo: 'tqc_respuesta',
+            piezaNombre: '❌ TQC RECHAZADO: ' + (estaciones[s.estacionId]?.nombre || s.estacionId) + ' - ' + comentario,
+            operario: s.operario,
+            estado: 'no_leido',
+            fecha: new Date().toISOString()
+        });
+    }
     cargarTQC();
-    toast('❌ Montaje rechazado');
+    actualizarBadgeTQC();
+    toast('❌ TQC rechazado');
+}
+
+async function aprobarTQC(id) {
+    const [solicitudes, estaciones] = await Promise.all([
+        cargarDatosFirebase('solicitudes'),
+        cargarDatosFirebase('estaciones')
+    ]);
+    const s = solicitudes[id];
+    if (!s) return;
+    
+    const nombreEstacion = estaciones[s.estacionId]?.nombre || 'Estación';
+    
+    await guardarFirebase('solicitudes', id, {
+        ...s,
+        estado: 'aprobado',
+        revisor: window.operarioActual?.nombre || 'Admin',
+        fechaRevision: new Date().toISOString()
+    });
+    
+    if (s.operario) {
+        await guardarFirebase('solicitudes', 'tqc_resp_' + Date.now(), {
+            tipo: 'tqc_respuesta',
+            piezaNombre: '✅ TQC APROBADO: ' + nombreEstacion,
+            operario: s.operario,
+            estado: 'no_leido',
+            fecha: new Date().toISOString()
+        });
+    }
+    cargarTQC();
+    actualizarBadgeTQC();
+    toast('✅ TQC aprobado');
+}
+
+async function rechazarTQC(id) {
+    const comentario = prompt('Motivo del rechazo:', '');
+    if (comentario === null) return;
+    
+    const [solicitudes, estaciones] = await Promise.all([
+        cargarDatosFirebase('solicitudes'),
+        cargarDatosFirebase('estaciones')
+    ]);
+    const s = solicitudes[id];
+    if (!s) return;
+    
+    const nombreEstacion = estaciones[s.estacionId]?.nombre || 'Estación';
+    
+    await guardarFirebase('solicitudes', id, {
+        ...s,
+        estado: 'rechazado',
+        comentario: comentario,
+        revisor: window.operarioActual?.nombre || 'Admin',
+        fechaRevision: new Date().toISOString()
+    });
+    
+    if (s.operario) {
+        await guardarFirebase('solicitudes', 'tqc_resp_' + Date.now(), {
+            tipo: 'tqc_respuesta',
+            piezaNombre: '❌ TQC RECHAZADO: ' + nombreEstacion + ' - ' + comentario,
+            operario: s.operario,
+            estado: 'no_leido',
+            fecha: new Date().toISOString()
+        });
+    }
+    cargarTQC();
+    actualizarBadgeTQC();
+    toast('❌ TQC rechazado');
 }
 
 async function actualizarBadgeTQC() {
@@ -6357,15 +6797,47 @@ async function cargarRegistroHerramientas() {
 // Variable para el scanner
 window._html5QrCode = null;
 
-function limpiarCodigo(codigo) {
-    // Si contiene #, extraer solo números después del último #
-    if (codigo.includes('#')) {
-        const partes = codigo.split('#');
-        const ultimaParte = partes[partes.length - 1];
-        return ultimaParte.replace(/[^0-9]/g, '');
+async function limpiarCodigo(codigo) {
+    const configData = await cargarDatosFirebase('configuracion');
+    const config = configData['escaner_config'] || {};
+    
+    let resultado = codigo;
+    
+    // Delimitador
+    if (config.delimitador) {
+        const partes = resultado.split(config.delimitador);
+        resultado = partes[partes.length - 1];
     }
-    // Si no tiene #, limpiar todo menos números
-    return codigo.replace(/[^0-9]/g, '');
+    
+    // Eliminar espacios (checkbox)
+    if (config.eliminarEspacios) {
+        resultado = resultado.replace(/\s/g, '');
+    }
+    
+    // Eliminar caracteres
+    if (config.eliminar) {
+        for (const c of config.eliminar) {
+            if (c !== ' ') { // Saltar espacios, ya se manejan con el checkbox
+                resultado = resultado.split(c).join('');
+            }
+        }
+    }
+    
+    // Conservar
+    if (config.conservar) {
+        let permitidos = config.conservar;
+        permitidos = permitidos.replace(/0-9/g, '0123456789');
+        
+        let filtrado = '';
+        for (const c of resultado) {
+            if (permitidos.includes(c)) {
+                filtrado += c;
+            }
+        }
+        resultado = filtrado;
+    }
+    
+    return resultado;
 }
 
 function limpiarCodigoQR(codigo) {
@@ -6596,7 +7068,7 @@ function agregarComponenteEscaneo() {
     renderizarTablaComponentes();
 }
 
-function renderizarTablaComponentes() {
+async function renderizarTablaComponentes() {
     const tbody = document.querySelector('#tablaComponentes tbody');
     if (!tbody) return;
     const comps = window._componentesActuales || [];
@@ -6628,8 +7100,8 @@ function renderizarTablaComponentes() {
         const inpCodigo = document.getElementById('codigo_' + i);
         const inpRevision = document.getElementById('revision_' + i);
         
-if (inpCodigo) inpCodigo.onchange = function() { 
-    const limpio = limpiarCodigo(this.value);
+if (inpCodigo) inpCodigo.onchange = async function() { 
+    const limpio = await limpiarCodigo(this.value);
     const anterior = window._componentesActuales[i].codigo;
     
     // Validar duplicado
@@ -6693,6 +7165,18 @@ async function abrirEscannerComponente() {
     const idx = window._escanearComponenteIndex || 0;
     const comps = window._componentesActuales || [];
     
+     // ✅ Resaltar la fila activa en la tabla
+    document.querySelectorAll('#tablaComponentes tbody tr').forEach((tr, i) => {
+        if (i === idx) {
+            tr.style.background = '#fff9c4';
+            tr.style.transition = 'background 0.3s';
+            tr.style.borderLeft = '4px solid #f59e0b';
+        } else {
+            tr.style.background = '';
+            tr.style.borderLeft = '';
+        }
+    });
+    
     // 8. Bloquear si ya tiene código al abrir la cámara
     if (comps[idx] && comps[idx].codigo) {
         if (!confirm(`⚠️ "${comps[idx].nombre}" ya tiene: ${comps[idx].codigo}\n\n¿Sobrescribir?`)) {
@@ -6731,6 +7215,11 @@ async function abrirEscannerComponente() {
         if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
         window._modoRapido = false;
         modal.remove();
+           // ✅ Quitar resaltado al cerrar
+    document.querySelectorAll('#tablaComponentes tbody tr').forEach(tr => {
+        tr.style.background = '';
+        tr.style.borderLeft = '';
+    });
     };
 
     // Saltar al siguiente
@@ -6740,6 +7229,11 @@ async function abrirEscannerComponente() {
         if (siguiente !== -1) {
             window._escanearComponenteIndex = siguiente;
             modal.remove();
+             // ✅ Quitar resaltado actual
+    document.querySelectorAll('#tablaComponentes tbody tr').forEach(tr => {
+        tr.style.background = '';
+        tr.style.borderLeft = '';
+    });
             abrirEscannerComponente();
         } else {
             window._modoRapido = false;
@@ -6749,7 +7243,7 @@ async function abrirEscannerComponente() {
     };
 
     // Manual con bloqueo
-    document.getElementById('btnManualComponente').onclick = () => {
+    document.getElementById('btnManualComponente').onclick = async () => {
         if (window._html5QrCode) try { window._html5QrCode.stop(); } catch(e) {}
         
         // 8. Bloquear si ya tiene código
@@ -6762,7 +7256,7 @@ async function abrirEscannerComponente() {
         
         const codigo = prompt('Código para ' + nombreComp + ':', comps[idx]?.codigo || '');
     if (codigo !== null) {
-        const limpio = limpiarCodigo(codigo);
+        const limpio = await limpiarCodigo(codigo);
         
         // Validar duplicado
         const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
@@ -6786,11 +7280,11 @@ async function abrirEscannerComponente() {
         await window._html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 150 } },
-            (decodedText) => {
+            async (decodedText) => {
                 if (window._procesandoEscaneo) return;
                 window._procesandoEscaneo = true;
                 
-                const limpio = limpiarCodigo(decodedText);
+                const limpio = await limpiarCodigo(decodedText);
                 
                 // 6. Validar duplicado
                 const duplicado = comps.findIndex((c, i) => i !== idx && c.codigo === limpio);
@@ -6969,6 +7463,161 @@ async function cargarComponentesAdmin() {
     container.innerHTML = html;
 }
 
+async function validarAntesDeTerminar(montajeId) {
+    const montajes = await cargarDatosFirebase('montajes');
+    const m = montajes[montajeId];
+    if (!m) return true;
+    
+    // Verificar resistencias
+    if (m.nombre && m.nombre.toLowerCase().includes('resistencia')) {
+        const data = await cargarDatosFirebase('resistencias_montajes');
+        const clave = window.operacionActiva + '_' + montajeId;
+        const guardado = data[clave];
+        
+        if (!guardado || !guardado.datos) return false;
+        
+        const total = Object.keys(guardado.datos).length;
+        const conLote = Object.values(guardado.datos).filter(d => d.lote).length;
+        if (conLote < total) return false;
+    }
+    
+    // Verificar componentes
+    if (m.requiereEscaneo) {
+        const data = await cargarDatosFirebase('componentes_escaneados');
+        const clave = window.operacionActiva + '_' + montajeId;
+        const guardado = data[clave];
+        
+        if (!guardado || !guardado.componentes) return false;
+        
+        const total = guardado.componentes.length;
+        const conCodigo = guardado.componentes.filter(c => c.codigo).length;
+        if (conCodigo < total) return false;
+    }
+    
+    return true;
+}
+
+// Cargar configuración guardada
+async function cargarConfigEscanner() {
+    const config = await cargarDatosFirebase('configuracion');
+    const escaner = config['escaner_config'] || {};
+    
+    document.getElementById('configEscanerEliminarEspacios').checked = escaner.eliminarEspacios || false;
+    document.getElementById('configEscanerEliminar').value = escaner.eliminar || '';
+    document.getElementById('configEscanerDelimitador').value = escaner.delimitador || '';
+    document.getElementById('configEscanerConservar').value = escaner.conservar || '';
+}
+
+// Guardar configuración
+async function guardarConfigEscanner() {
+    const config = {
+    eliminar: document.getElementById('configEscanerEliminar').value,
+    delimitador: document.getElementById('configEscanerDelimitador').value,
+    conservar: document.getElementById('configEscanerConservar').value,
+    eliminarEspacios: document.getElementById('configEscanerEliminarEspacios').checked
+};
+    
+    await guardarFirebase('configuracion', 'escaner_config', config);
+    
+    // Probar con un ejemplo
+    const test = await limpiarCodigoConfigurable('ABC-123#456 def');
+    document.getElementById('configEscannerTest').textContent = test || '—';
+    
+    toast('✅ Configuración guardada');
+}
+
+// Nueva función de limpieza configurable
+async function limpiarCodigoConfigurable(codigo) {
+    const configData = await cargarDatosFirebase('configuracion');
+    const config = configData['escaner_config'] || {};
+    
+    let resultado = codigo;
+    
+    if (config.delimitador) {
+        const partes = resultado.split(config.delimitador);
+        resultado = partes[partes.length - 1];
+    }
+    
+    if (config.eliminar) {
+        for (const c of config.eliminar) {
+            if (c === ' ') {
+                resultado = resultado.replace(/\s/g, '');
+            } else {
+                resultado = resultado.split(c).join('');
+            }
+        }
+    }
+    
+    if (config.conservar) {
+        let permitidos = config.conservar;
+        permitidos = permitidos.replace(/0-9/g, '0123456789');
+        permitidos = permitidos.replace(/a-z/g, 'abcdefghijklmnopqrstuvwxyz');
+        permitidos = permitidos.replace(/A-Z/g, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        
+        let filtrado = '';
+        for (const c of resultado) {
+            if (permitidos.includes(c)) {
+                filtrado += c;
+            }
+        }
+        resultado = filtrado;
+    }
+    
+    return resultado;
+}
+
+
+
+function probarConfigEscanner() {
+    const testInput = document.getElementById('configEscanerTestInput')?.value;
+    const spanResultado = document.getElementById('configEscannerResultado');
+    
+    if (!testInput) {
+        spanResultado.textContent = '—';
+        return;
+    }
+    
+    const eliminar = document.getElementById('configEscanerEliminar')?.value || '';
+    const delimitador = document.getElementById('configEscanerDelimitador')?.value || '';
+    const conservar = document.getElementById('configEscanerConservar')?.value || '';
+    const eliminarEspacios = document.getElementById('configEscanerEliminarEspacios')?.checked || false;
+    
+    let resultado = testInput;
+    
+    if (delimitador) {
+        const partes = resultado.split(delimitador);
+        resultado = partes[partes.length - 1];
+    }
+    
+    if (eliminarEspacios) {
+        resultado = resultado.replace(/\s/g, '');
+    }
+    
+    if (eliminar) {
+        for (const c of eliminar) {
+            if (c !== ' ') {
+                resultado = resultado.split(c).join('');
+            }
+        }
+    }
+    
+    if (conservar) {
+        let permitidos = conservar;
+        permitidos = permitidos.replace(/0-9/g, '0123456789');
+        
+        let filtrado = '';
+        for (const c of resultado) {
+            if (permitidos.includes(c)) {
+                filtrado += c;
+            }
+        }
+        resultado = filtrado;
+    }
+    
+    spanResultado.textContent = resultado || '(vacío)';
+    spanResultado.style.color = resultado ? 'var(--success)' : 'var(--danger)';
+}
+
 // ============================================================
 // CATÁLOGO DE COMPONENTES (ADMIN)
 // ============================================================
@@ -7134,6 +7783,23 @@ window.db.collection('inspecciones_premontaje').onSnapshot(() => {
     }
 });
 
+// --- Historial montajes (tiempo real para completados) ---
+window.db.collection('historial_montajes').onSnapshot(() => {
+    if (document.getElementById('montajes-operacion')?.classList.contains('active') && window.operacionActiva) {
+        cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
+    }
+    if (document.getElementById('dashboard')?.classList.contains('active')) {
+        actualizarDashboard();
+    }
+});
+
+// --- Cronos pausados (tiempo real) ---
+window.db.collection('cronos_pausados').onSnapshot(() => {
+    if (document.getElementById('montajes-operacion')?.classList.contains('active') && window.operacionActiva) {
+        cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
+    }
+});
+
         // --- Montajes ---
         window.db.collection('montajes').onSnapshot(() => {
             if (document.getElementById('materiales').classList.contains('active')) {
@@ -7219,6 +7885,12 @@ window.db.collection('inspecciones_premontaje').onSnapshot(() => {
     setInterval(actualizarBadgeAdmin, 2000);
     setInterval(actualizarBadgeTQC, 2000);
     setInterval(actualizarBadgeNotificaciones, 2000);
+    setInterval(() => {
+    const dash = document.getElementById('dashboard');
+    if (dash && dash.classList.contains('active')) {
+        actualizarDashboard();
+    }
+}, 2000);
 })();
 </script>
 </body>
