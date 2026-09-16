@@ -252,6 +252,7 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
             <button class="nav-item-dash admin-nav-item" data-admin-tab="tornilleria"><i class="fas fa-cog nav-icon-dash"></i>Tornillería</button>
             <button class="nav-item-dash admin-nav-item" data-admin-tab="inspeccion"><i class="fas fa-search nav-icon-dash"></i>Inspección</button>
             <button class="nav-item-dash admin-nav-item" data-admin-tab="escanner"><i class="fas fa-qrcode nav-icon-dash"></i>Escáner</button>
+         <button class="nav-item-dash admin-nav-item" data-admin-tab="configEscaner"><i class="fas fa-sliders-h nav-icon-dash"></i>Config. Escáner</button>
             <button class="nav-item-dash admin-nav-item" data-admin-tab="catalogoComponentes"><i class="fas fa-microchip nav-icon-dash"></i>Componentes</button>
             <button class="nav-item-dash" onclick="cerrarSesion()" style="margin-top:1rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:1rem;color:var(--danger);">
                 <i class="fas fa-sign-out-alt nav-icon-dash"></i>Cerrar Sesión
@@ -742,6 +743,98 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
             </div>
         </div>
 
+<div class="admin-panel" id="adminPanelConfigEscaner" style="display:none;position:relative;clear:both;overflow:visible;">
+    <div class="panel">
+        <h3>⚙️ Configuración del Escáner</h3>
+        <p style="font-size:0.85rem;color:var(--gray-600);margin-bottom:1rem;">
+            Define cómo se limpian los códigos escaneados antes de guardarlos.
+        </p>
+
+        <div style="background:#e3f2fd;border-radius:10px;padding:12px;margin-bottom:1rem;font-size:0.8rem;color:#1565c0;border-left:4px solid #2d74da;">
+            💡 Ejemplo: si escaneas <code style="background:white;padding:2px 6px;border-radius:4px;font-family:monospace;">ABC#12345-X</code> y activas <strong>Cortar por #</strong> + <strong>Solo números</strong>, se guardará <code style="background:white;padding:2px 6px;border-radius:4px;font-family:monospace;">12345</code>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:1.2rem;">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_cortarHash" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">🔗 Cortar por #</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Si el código tiene <code>#</code>, coge solo lo que hay después del último</div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_soloNumeros" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">🔢 Solo números</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Elimina todas las letras y símbolos, deja solo 0-9</div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_quitarComillas" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">❞ Quitar comillas</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Elimina <code>"</code> y <code>'</code> del principio y final</div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_quitarGuiones" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">➖ Quitar guiones</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Elimina <code>-</code> y <code>_</code></div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_quitarEspacios" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">␣ Quitar espacios</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Elimina espacios en blanco y saltos de línea</div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--gray-50);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" id="cfgEscaner_mayusculas" style="width:18px;height:18px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.85rem;">🔠 Pasar a MAYÚSCULAS</div>
+                    <div style="font-size:0.7rem;color:var(--gray-600);">Convierte todo a mayúsculas (útil si el código tiene letras)</div>
+                </div>
+            </label>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+            <label style="font-weight:600;">🧹 Quitar prefijos conocidos</label>
+            <div style="font-size:0.75rem;color:var(--gray-600);margin-bottom:6px;">
+                Uno por línea. Si el código empieza por alguno, se elimina.
+            </div>
+            <textarea id="cfgEscaner_prefijos" rows="4" placeholder="SN:&#10;CODE:&#10;REF:&#10;ID:" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray-300);font-size:0.8rem;font-family:monospace;"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+            <label style="font-weight:600;">📏 Longitud exacta (opcional)</label>
+            <div style="font-size:0.75rem;color:var(--gray-600);margin-bottom:6px;">
+                Si el código tiene más caracteres, se corta a esta longitud. Deja 0 para no cortar.
+            </div>
+            <input type="number" id="cfgEscaner_longitud" min="0" max="50" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray-300);font-size:0.85rem;">
+        </div>
+
+        <div style="background:#fff8e1;border-radius:10px;padding:12px;margin-bottom:1rem;border-left:4px solid var(--warning);">
+            <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">🧪 Probar con un código:</label>
+            <input type="text" id="cfgEscaner_testInput" placeholder="Escribe o pega un código..." style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--gray-300);font-size:0.85rem;margin-bottom:6px;" oninput="probarLimpiezaEscaner()">
+            <div style="background:white;border-radius:6px;padding:8px;font-family:monospace;font-size:0.9rem;color:var(--primary);font-weight:700;">
+                Resultado: <span id="cfgEscaner_testOutput">—</span>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-success" onclick="guardarConfigEscaner()" style="flex:1;">💾 Guardar configuración</button>
+            <button class="btn btn-outline" onclick="resetConfigEscaner()">🔄 Resetear</button>
+        </div>
+    </div>
+</div>
+
     </div>
 
 </main>
@@ -749,8 +842,9 @@ table td{padding:8px;border-bottom:1px solid var(--gray-200)}
 
 <div class="crono-badge-flotante" id="cronoBadgeFlotante" onclick="irAlMontajeActivo()" style="cursor:pointer;" title="Ir al montaje en curso">
     <span>⏱️</span>
-    <span id="cronoBadgeTiempo">00:00:00</span>
+    <span id="cronoBadgeTiempo">0.00h</span>
     <span id="cronoBadgeMontaje">-</span>
+    <span id="cronoBadgeOperarios" style="font-size:0.7rem;opacity:0.85;border-left:1px solid rgba(255,255,255,0.4);padding-left:6px;margin-left:2px;">-</span>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -1172,21 +1266,30 @@ async function cerrarSesion() {
                     window.herramientasCache[hid].operario = '';
                 }
             }
+if (window.operacionActiva && cs.montajeId) {
+    await pausarCronoMontaje(window.operacionActiva, cs.montajeId);
+}
             cerrarMontajeActivo(true);
             toast('✅ Montaje terminado');
         }
 
-        if (resp === 'pausar') {
-            await guardarPausaCrono();
-            _detenerIntervaloCrono();
-            toast('⏸️ Montaje pausado');
-        }
+ if (resp === 'pausar') {
+    await guardarPausaCrono();
+    _detenerIntervaloCrono();
+    if (window.operacionActiva && cs.montajeId) {
+        await pausarCronoMontaje(window.operacionActiva, cs.montajeId);
+    }
+    toast('⏸️ Montaje pausado');
+}
 
-        if (resp === 'ignorar') {
-            await guardarPausaCrono();
-            _detenerIntervaloCrono();
-            toast('🔄 Montaje guardado en segundo plano');
-        }
+if (resp === 'ignorar') {
+    await guardarPausaCrono();
+    _detenerIntervaloCrono();
+    if (window.operacionActiva && cs.montajeId) {
+        await pausarCronoMontaje(window.operacionActiva, cs.montajeId);
+    }
+    toast('🔄 Montaje guardado en segundo plano');
+}
     }
 
     // Limpiar intervals globales
@@ -1245,6 +1348,45 @@ async function seleccionarOperacion(id) {
     document.getElementById('operacionInfoBar').style.display = 'flex';
     showPage('montajes-operacion');
     cargarMontajesOperacion(id, op.modelo);
+
+    // ✅ Cargar crono global de esta operación
+    setTimeout(async () => {
+    const c = await cargarCronoOperacion(id);
+
+    // Comprobar si hay algún montaje activo en Firestore
+    const data = await cargarDatosFirebase('cronos_montajes', true);
+    const activos = Object.entries(data).filter(([k, m]) =>
+        m.operacionId === id && (m.operariosActivos || []).length > 0
+    );
+
+    if (activos.length > 0) {
+        // Hay actividad, arrancar el tick
+        window._cronoOperacion.activo = true;
+        _iniciarTickCronoOperacion();
+        _tickGlobal(); // pintar ya
+    } else {
+        // Sin actividad: calcular el restante con lo guardado
+        let consumidoSeg = 0;
+        for (const [k, m] of Object.entries(data)) {
+            if (m.operacionId !== id) continue;
+            consumidoSeg += m.tiempoConsumidoSeg || 0;
+        }
+        const restante = c.tiempoTotalSeg - consumidoSeg;
+
+        const badge = document.getElementById('cronoBadgeFlotante');
+        if (badge && c.tiempoTotalSeg > 0) {
+            badge.style.display = 'flex';
+            badge.classList.toggle('negativo', restante < 0);
+            document.getElementById('cronoBadgeTiempo').textContent =
+                restante >= 0 ? segundosAHorasDecimales(restante) : '-' + segundosAHorasDecimales(-restante);
+            document.getElementById('cronoBadgeMontaje').textContent =
+                c.numeroOperacion ? `Op. ${c.numeroOperacion}` : 'Operación';
+            document.getElementById('cronoBadgeOperarios').textContent = '';
+        } else if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+}, 500);
 }
 
 async function cargarMontajesOperacion(operacionId, modelo) {
@@ -1955,8 +2097,11 @@ async function pulsarMontaje(montajeId, nombreEnc, horas, estacionId) {
         cs.tiempoRestanteSeg = totalSeg;
         cs.tiempoInicio = Date.now();
         cs.intervalo = setInterval(tickCrono, 1000);
-        tickCrono();
-        cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
+tickCrono();
+// ✅ Arrancar crono global de la operación
+// ✅ Registrar operario en el crono del montaje
+await arrancarCronoMontaje(window.operacionActiva, montajeId);
+cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
     } finally { ocultarLoading(); }
 }
 
@@ -2011,6 +2156,10 @@ async function cerrarMontajeActivo(completo) {
     const cs = getCronoState();
     const tiempoRealSeg = Math.floor((Date.now() - cs.tiempoInicio) / 1000);
     _detenerIntervaloCrono();
+    // ✅ Pausar crono global de la operación
+    if (window.operacionActiva) {
+        await pausarCronoOperacion(window.operacionActiva);
+    }
     if (!completo) return;
     guardarFirebase('historial_montajes', 'comp_' + cs.montajeId + '_' + Date.now(), {
         montajeId: cs.montajeId,
@@ -2095,6 +2244,10 @@ async function pausarMontajeActivo() {
     if (!ok) return;
     await guardarPausaCrono();
     _detenerIntervaloCrono();
+// ✅ Pausar crono del montaje
+if (window.operacionActiva && cs.montajeId) {
+    await pausarCronoMontaje(window.operacionActiva, cs.montajeId);
+}
     toast('⏸️ Montaje pausado: ' + cs.montajeNombre);
     cargarMontajesOperacion(window.operacionActiva, window._modeloActivo || 'MS3');
 }
@@ -2104,14 +2257,45 @@ function tickCrono() {
     if (!cs.activo) return;
     const elapsed = Math.floor((Date.now() - cs.tiempoInicio) / 1000);
     cs.tiempoRestanteSeg = cs.tiempoTotalSeg - elapsed;
-    const badge = document.getElementById('cronoBadgeFlotante');
-    if (badge) { badge.style.display = 'flex'; badge.classList.toggle('negativo', cs.tiempoRestanteSeg < 0); }
-    document.getElementById('cronoBadgeTiempo').textContent = cs.tiempoRestanteSeg >= 0 ? segundosAHHMMSS(cs.tiempoRestanteSeg) : '-' + segundosAHHMMSS(-cs.tiempoRestanteSeg);
-    document.getElementById('cronoBadgeMontaje').textContent = cs.montajeNombre;
+    
     const display = document.getElementById('crono_display_' + cs.montajeId);
     if (display) {
         display.textContent = cs.tiempoRestanteSeg >= 0 ? '⏳ ' + segundosAHHMMSS(cs.tiempoRestanteSeg) : '⚠️ +' + segundosAHHMMSS(-cs.tiempoRestanteSeg);
         display.style.color = cs.tiempoRestanteSeg < 0 ? '#f44336' : cs.tiempoRestanteSeg < 300 ? '#ff9800' : '#2e7d32';
+    }
+
+    // ✅ NUEVO: actualizar SOLO el número del tiempo restante en el Dashboard (sin Firestore)
+    const dashEl = document.getElementById('dashboard');
+    if (dashEl && dashEl.classList.contains('active')) {
+        _actualizarTiempoRestanteDashboard();
+    }
+}
+
+// ✅ Función ligera: solo actualiza el número, sin tocar Firestore
+function _actualizarTiempoRestanteDashboard() {
+    const cs = getCronoState();
+    if (!cs || !cs.activo) return;
+    const tiempoHoyEl = document.getElementById('dashTiempoHoy');
+    if (!tiempoHoyEl) return;
+
+    // Recalcular con el cronómetro en vivo
+    // Necesitamos el tiempoTotal de la operación (ya lo tenemos cacheado)
+    const tiempoTotal = window._dashTiempoTotalSeg || 0;
+    if (tiempoTotal === 0) return;
+
+    const tiempoRealTotal = (window._dashTiempoRealBase || 0) +
+        Math.floor((Date.now() - cs.tiempoInicio) / 1000);
+    const tiempoRestanteSeg = Math.max(0, tiempoTotal - tiempoRealTotal);
+    tiempoHoyEl.textContent = (tiempoRestanteSeg / 3600).toFixed(2) + 'h';
+
+    // Actualizar color según porcentaje restante
+    const pctRestante = tiempoTotal > 0 ? (tiempoRestanteSeg / tiempoTotal) * 100 : 0;
+    const statCard = tiempoHoyEl.closest('.stat-card');
+    if (statCard) {
+        statCard.classList.remove('success', 'warning', 'danger');
+        if (pctRestante > 50) statCard.classList.add('success');
+        else if (pctRestante > 25) statCard.classList.add('warning');
+        else statCard.classList.add('danger');
     }
 }
 
@@ -2120,7 +2304,6 @@ function _detenerIntervaloCrono() {
     clearInterval(cs.intervalo);
     cs.intervalo = null;
     cs.activo = false;
-    document.getElementById('cronoBadgeFlotante').style.display = 'none';
 }
 
 async function mostrarModalCambioMontaje(actual, nuevo) {
@@ -2369,6 +2552,9 @@ async function actualizarDashboard() {
         document.getElementById('dashTiempoTotalMontajes').textContent = '0.00h';
         document.getElementById('dashPendientes').textContent = '0';
         document.getElementById('dashTiempoHoy').textContent = '0.00h';
+        // Limpiar valores base cacheados
+        window._dashTiempoTotalSeg = 0;
+        window._dashTiempoRealBase = 0;
         return;
     }
     const [historial, montajes, ops] = await Promise.all([cargarDatosFirebase('historial_montajes'), cargarDatosFirebase('montajes'), cargarDatosFirebase('operaciones')]);
@@ -2378,7 +2564,7 @@ async function actualizarDashboard() {
     const completados = Object.values(historial).filter(h => h.completado && h.operacionId === operacionId);
     document.getElementById('dashMontajesHoy').textContent = completados.length;
     const tiempoTotal = Object.values(montajes).filter(m => m.modelo === modelo).reduce((a, m) => a + Math.round((parseFloat(m.tiempoHoras) || 0) * 3600), 0);
-    // ✅ CAMBIO: horas decimales
+    // ✅ Horas decimales
     document.getElementById('dashTiempoTotalMontajes').textContent = (tiempoTotal / 3600).toFixed(2) + 'h';
     const pendientes = Math.max(0, totalMontajesOperacion - completados.length);
     document.getElementById('dashPendientes').textContent = pendientes;
@@ -2390,7 +2576,7 @@ async function actualizarDashboard() {
     let tiempoRealTotal = montajesHoy.reduce((a, h) => a + (h.tiempoRealSeg || 0), 0);
     if (cs.activo && cs.tiempoInicio) tiempoRealTotal += Math.floor((Date.now() - cs.tiempoInicio) / 1000);
     const tiempoRestanteSeg = Math.max(0, tiempoTotal - tiempoRealTotal);
-    // ✅ CAMBIO: horas decimales
+    // ✅ Horas decimales
     document.getElementById('dashTiempoHoy').textContent = (tiempoRestanteSeg / 3600).toFixed(2) + 'h';
     const pctRestante = tiempoTotal > 0 ? (tiempoRestanteSeg / tiempoTotal) * 100 : 0;
     const tiempoElement = document.getElementById('dashTiempoHoy');
@@ -2406,9 +2592,45 @@ async function actualizarDashboard() {
         else if (pctRestante > 25) statCard.classList.add('warning');
         else statCard.classList.add('danger');
     }
+
+    // ✅ NUEVO: guardar valores base para que tickCrono pueda actualizar en vivo
+    window._dashTiempoTotalSeg = tiempoTotal;
+    const tiempoEnCursoSeg = (cs.activo && cs.tiempoInicio) ? Math.floor((Date.now() - cs.tiempoInicio) / 1000) : 0;
+    window._dashTiempoRealBase = tiempoRealTotal - tiempoEnCursoSeg;
+
     cargarDetalleOperacionesDashboard();
 }
 
+// ✅ Actualiza SOLO el número del "Tiempo restante" en el Dashboard (sin Firestore)
+function _actualizarTiempoRestanteDashboard() {
+    const cs = getCronoState();
+    if (!cs || !cs.activo) return;
+
+    const tiempoHoyEl = document.getElementById('dashTiempoHoy');
+    if (!tiempoHoyEl) return;
+
+    const tiempoTotal = window._dashTiempoTotalSeg || 0;
+    if (tiempoTotal === 0) return;
+
+    const tiempoRealTotal = (window._dashTiempoRealBase || 0) +
+        Math.floor((Date.now() - cs.tiempoInicio) / 1000);
+
+    const tiempoRestanteSeg = Math.max(0, tiempoTotal - tiempoRealTotal);
+    tiempoHoyEl.textContent = (tiempoRestanteSeg / 3600).toFixed(2) + 'h';
+
+    const pctRestante = tiempoTotal > 0 ? (tiempoRestanteSeg / tiempoTotal) * 100 : 0;
+    if (pctRestante > 50) tiempoHoyEl.style.color = 'var(--success)';
+    else if (pctRestante > 25) tiempoHoyEl.style.color = 'var(--warning)';
+    else tiempoHoyEl.style.color = 'var(--danger)';
+
+    const statCard = tiempoHoyEl.closest('.stat-card');
+    if (statCard) {
+        statCard.classList.remove('success', 'warning', 'danger');
+        if (pctRestante > 50) statCard.classList.add('success');
+        else if (pctRestante > 25) statCard.classList.add('warning');
+        else statCard.classList.add('danger');
+    }
+}
 async function cargarDetalleOperacionesDashboard() {
     const container = document.getElementById('detalleOperacionesDashboard');
     if (!container) return;
@@ -3316,7 +3538,7 @@ async function switchAdminTab(tab) {
     if (admin) { admin.style.minHeight = '80vh'; admin.style.height = 'auto'; }
     const titulos = {
         'operarios': '👥 Operarios', 'estaciones': '📍 Estaciones', 'operaciones': '🔢 Operaciones',
-        'inspeccion': '🔍 Inspección', 'escanner': '📷 Escáner', 'catalogoComponentes': '📷 Componentes',
+        'inspeccion': '🔍 Inspección', 'escanner': '📷 Escáner', 'configEscaner': '⚙️ Configuración Escáner','catalogoComponentes': '📷 Componentes',
         'montajes': '📦 Montajes', 'kanban': '📦 Kanban', 'materiales': '🧪 Materiales',
         'herramientas': '🔧 Herramientas', 'tornilleria': '🔩 Tornillería',
         'resistenciasAdmin': '⚡ Resistencias', 'solicitudes': '📢 Solicitudes',
@@ -3332,7 +3554,7 @@ async function switchAdminTab(tab) {
     document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
     const panelMap = {
         'operarios': 'adminPanelOperarios', 'estaciones': 'adminPanelEstaciones', 'operaciones': 'adminPanelOperaciones',
-        'inspeccion': 'adminPanelInspeccion', 'escanner': 'adminPanelEscanner', 'catalogoComponentes': 'adminPanelCatalogoComponentes',
+        'inspeccion': 'adminPanelInspeccion', 'escanner': 'adminPanelEscanner','configEscaner': 'adminPanelConfigEscaner', 'catalogoComponentes': 'adminPanelCatalogoComponentes',
         'montajes': 'adminPanelMontajes', 'tornilleria': 'adminPanelTornilleria', 'resistenciasAdmin': 'adminPanelResistenciasAdmin',
         'kanban': 'adminPanelKanban', 'materiales': 'adminPanelMateriales', 'herramientas': 'adminPanelHerramientas',
         'solicitudes': 'adminPanelSolicitudes', 'entregarMateriales': 'adminPanelEntregarMateriales', 'tqc': 'adminPanelTqc',
@@ -3357,6 +3579,7 @@ async function switchAdminTab(tab) {
     if (tab === 'tornilleria') cargarAdminTornilleria();
     if (tab === 'inspeccion') cargarSelectorInspeccion();
     if (tab === 'escanner') cargarSelectorOperacionesComponentes();
+    if (tab === 'configEscaner') cargarConfigEscaner();
     if (tab === 'catalogoComponentes') cargarCatalogoComponentes();
     if (tab === 'solicitudes') {
         const solicitudes = await cargarDatosFirebase('solicitudes');
@@ -4685,7 +4908,7 @@ async function cargarSolicitudesAdmin(tipo) {
         <div style="background:#e8f5e9;border-radius:10px;padding:10px 16px;text-align:center;flex:1;"><div style="font-size:1.5rem;font-weight:700;color:var(--success);">${atendidas}</div><div style="font-size:0.7rem;">Atendidas</div></div>
     </div>
     <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-        <thead><tr style="background:var(--gray-50);"><th style="padding:10px;">${tipo === 'kanban' ? '📦 Pieza' : '🧪 Material'}</th><th style="padding:10px;">👤 Solicitante</th><th style="padding:10px;">📅 Pedido</th><th style="padding:10px;">✅ Repuesto</th><th style="padding:10px;">👤 Repuesto por</th><th style="padding:10px;text-align:center;">Estado</th></tr></thead>
+        <thead><tr style="background:var(--gray-50);"><th style="padding:10px;">${tipo === 'kanban' ? '📦 Pieza' : '🧪 Material'}</th><th style="padding:10px;">?? Solicitante</th><th style="padding:10px;">📅 Pedido</th><th style="padding:10px;">✅ Repuesto</th><th style="padding:10px;">👤 Repuesto por</th><th style="padding:10px;text-align:center;">Estado</th></tr></thead>
         <tbody>`;
     arr.forEach(([id, s]) => {
         const esPendiente = s.estado === 'pendiente';
@@ -6235,8 +6458,29 @@ let _filtroNotifAdmin = 'todas';
             actualizarBadgeNotificaciones();
             if (document.getElementById('adminPanelSolicitudes') && document.getElementById('adminPanelSolicitudes').style.display !== 'none') cargarSolicitudesAdmin(window.solicitudesTipoActivo || 'kanban');
         });
+window.db.collection('cronos_montajes').onSnapshot(snap => {
+    if (!window.operacionActiva) return;
+    const data = {};
+    snap.forEach(doc => { data[doc.id] = doc.data(); });
+    // ¿Hay algo activo de mi operación?
+    const hayActivo = Object.values(data).some(m =>
+        m.operacionId === window.operacionActiva && (m.operariosActivos || []).length > 0
+    );
+    if (hayActivo && !window._cronoOperacion.intervalo) {
+        window._cronoOperacion.activo = true;
+        _iniciarTickCronoOperacion();
+    }
+    if (!hayActivo && window._cronoOperacion.intervalo) {
+        // Se detuvo todo, parar tick
+        _detenerTickCronoOperacion();
+        window._cronoOperacion.activo = false;
+        _tickGlobal(); // pintar el valor final congelado
+    }
+});
     }
     cargarOperariosLogin();
+    // Cargar configuración del escáner
+setTimeout(() => cargarConfigEscaner().catch(()=>{}), 1500);
     setTimeout(function() { actualizarBadgeAdmin(); actualizarBadgeNotificaciones(); }, 2000);
     window._appIntervals.push(setInterval(actualizarBadgeAdmin, 2000));
     window._appIntervals.push(setInterval(actualizarBadgeTQC, 2000));
@@ -6246,6 +6490,411 @@ let _filtroNotifAdmin = 'todas';
         if (dash && dash.classList.contains('active')) actualizarDashboard();
     }, 2000));
 })();
+
+// ============================================================
+// ⚙️ CONFIGURACIÓN DEL ESCÁNER
+// ============================================================
+window._escanerConfig = {
+    cortarHash: true,
+    soloNumeros: true,
+    quitarComillas: true,
+    quitarGuiones: false,
+    quitarEspacios: true,
+    mayusculas: false,
+    prefijos: [],
+    longitud: 0
+};
+
+async function cargarConfigEscaner() {
+    try {
+        const config = await cargarDatosFirebase('configuracion');
+        const saved = config['escaner_config'];
+        if (saved) {
+            window._escanerConfig = { ...window._escanerConfig, ...saved };
+        }
+    } catch (e) { console.error('Error cargando config escáner:', e); }
+
+    const c = window._escanerConfig;
+    document.getElementById('cfgEscaner_cortarHash').checked = !!c.cortarHash;
+    document.getElementById('cfgEscaner_soloNumeros').checked = !!c.soloNumeros;
+    document.getElementById('cfgEscaner_quitarComillas').checked = !!c.quitarComillas;
+    document.getElementById('cfgEscaner_quitarGuiones').checked = !!c.quitarGuiones;
+    document.getElementById('cfgEscaner_quitarEspacios').checked = !!c.quitarEspacios;
+    document.getElementById('cfgEscaner_mayusculas').checked = !!c.mayusculas;
+    document.getElementById('cfgEscaner_prefijos').value = (c.prefijos || []).join('\n');
+    document.getElementById('cfgEscaner_longitud').value = c.longitud || 0;
+    document.getElementById('cfgEscaner_testInput').value = '';
+    document.getElementById('cfgEscaner_testOutput').textContent = '—';
+}
+
+async function guardarConfigEscaner() {
+    const prefijosTexto = document.getElementById('cfgEscaner_prefijos').value || '';
+    const prefijos = prefijosTexto.split('\n').map(p => p.trim()).filter(p => p);
+
+    window._escanerConfig = {
+        cortarHash: document.getElementById('cfgEscaner_cortarHash').checked,
+        soloNumeros: document.getElementById('cfgEscaner_soloNumeros').checked,
+        quitarComillas: document.getElementById('cfgEscaner_quitarComillas').checked,
+        quitarGuiones: document.getElementById('cfgEscaner_quitarGuiones').checked,
+        quitarEspacios: document.getElementById('cfgEscaner_quitarEspacios').checked,
+        mayusculas: document.getElementById('cfgEscaner_mayusculas').checked,
+        prefijos: prefijos,
+        longitud: parseInt(document.getElementById('cfgEscaner_longitud').value) || 0
+    };
+
+    await guardarFirebase('configuracion', 'escaner_config', window._escanerConfig);
+    toast('✅ Configuración del escáner guardada');
+}
+
+async function resetConfigEscaner() {
+    const ok = await confirmar('¿Resetear la configuración del escáner a valores por defecto?', { tipo: 'warning' });
+    if (!ok) return;
+    window._escanerConfig = {
+        cortarHash: true,
+        soloNumeros: true,
+        quitarComillas: true,
+        quitarGuiones: false,
+        quitarEspacios: true,
+        mayusculas: false,
+        prefijos: [],
+        longitud: 0
+    };
+    await guardarFirebase('configuracion', 'escaner_config', window._escanerConfig);
+    cargarConfigEscaner();
+    toast('🔄 Configuración reseteada');
+}
+
+function probarLimpiezaEscaner() {
+    const input = document.getElementById('cfgEscaner_testInput').value;
+    const out = document.getElementById('cfgEscaner_testOutput');
+    if (!input) { out.textContent = '—'; return; }
+    // Recoger valores actuales del formulario (sin guardar)
+    const cfg = {
+        cortarHash: document.getElementById('cfgEscaner_cortarHash').checked,
+        soloNumeros: document.getElementById('cfgEscaner_soloNumeros').checked,
+        quitarComillas: document.getElementById('cfgEscaner_quitarComillas').checked,
+        quitarGuiones: document.getElementById('cfgEscaner_quitarGuiones').checked,
+        quitarEspacios: document.getElementById('cfgEscaner_quitarEspacios').checked,
+        mayusculas: document.getElementById('cfgEscaner_mayusculas').checked,
+        prefijos: (document.getElementById('cfgEscaner_prefijos').value || '').split('\n').map(p => p.trim()).filter(p => p),
+        longitud: parseInt(document.getElementById('cfgEscaner_longitud').value) || 0
+    };
+    out.textContent = _aplicarLimpieza(input, cfg) || '(vacío)';
+}
+
+// ✅ limpiarCodigo() ahora respeta la configuración
+function limpiarCodigo(codigo) {
+    return _aplicarLimpieza(codigo, window._escanerConfig || {
+        cortarHash: true, soloNumeros: true, quitarComillas: true,
+        quitarGuiones: false, quitarEspacios: true, mayusculas: false,
+        prefijos: [], longitud: 0
+    });
+}
+
+function _aplicarLimpieza(codigo, cfg) {
+    if (!codigo) return '';
+    let c = String(codigo);
+
+    // 1. Quitar espacios primero
+    if (cfg.quitarEspacios) c = c.replace(/\s+/g, '');
+
+    // 2. Quitar comillas
+    if (cfg.quitarComillas) c = c.replace(/["']/g, '');
+
+    // 3. Quitar guiones y underscores
+    if (cfg.quitarGuiones) c = c.replace(/[-_]/g, '');
+
+    // 4. Cortar por # (coge lo de después del último)
+    if (cfg.cortarHash && c.includes('#')) {
+        const partes = c.split('#');
+        c = partes[partes.length - 1];
+    }
+
+    // 5. Quitar prefijos conocidos
+    if (cfg.prefijos && cfg.prefijos.length > 0) {
+        for (const prefijo of cfg.prefijos) {
+            if (prefijo && c.toUpperCase().startsWith(prefijo.toUpperCase())) {
+                c = c.substring(prefijo.length);
+            }
+        }
+    }
+
+    // 6. Solo números
+    if (cfg.soloNumeros) c = c.replace(/[^0-9]/g, '');
+
+    // 7. Mayúsculas
+    if (cfg.mayusculas) c = c.toUpperCase();
+
+    // 8. Longitud exacta
+    if (cfg.longitud && cfg.longitud > 0 && c.length > cfg.longitud) {
+        c = c.substring(0, cfg.longitud);
+    }
+
+    return c;
+}
+
+function limpiarCodigoQR(codigo) { return limpiarCodigo(codigo); }
+
+// ============================================================
+// ⏱️ CRONÓMETRO POR MONTAJE + GLOBAL DE OPERACIÓN
+// El tiempo de un montaje se multiplica por los operarios
+// que estén trabajando EN ESE MONTAJE
+// ============================================================
+window._cronoOperacion = {
+    operacionId: null,
+    numeroOperacion: '',
+    tiempoTotalSeg: 0,
+    activo: false,
+    intervalo: null,
+    // Cache local de montajes activos: { montajeId: { operarios: [], ultimoTick } }
+    montajesActivos: {}
+};
+
+// Convierte segundos a horas decimales (ej: 5400 → "1.50h")
+function segundosAHorasDecimales(seg) {
+    return (Math.abs(seg) / 3600).toFixed(2) + 'h';
+}
+
+// ------------------------------------------------------------
+// CARGAR/INICIALIZAR
+// ------------------------------------------------------------
+async function cargarCronoOperacion(operacionId) {
+    if (!operacionId) return null;
+    if (window._cronoOperacion.operacionId === operacionId) return window._cronoOperacion;
+
+    const operaciones = await cargarDatosFirebase('operaciones');
+    const op = operaciones[operacionId];
+    const totalSeg = await calcularTiempoTotalOperacion(operacionId);
+
+    window._cronoOperacion = {
+        operacionId,
+        numeroOperacion: op ? op.numero : '',
+        tiempoTotalSeg: totalSeg,
+        activo: false,
+        intervalo: window._cronoOperacion.intervalo,
+        montajesActivos: {}
+    };
+    return window._cronoOperacion;
+}
+
+async function calcularTiempoTotalOperacion(operacionId) {
+    const [montajes, operaciones] = await Promise.all([
+        cargarDatosFirebase('montajes'),
+        cargarDatosFirebase('operaciones')
+    ]);
+    const op = operaciones[operacionId];
+    if (!op) return 0;
+    const modelo = op.modelo || 'MS3';
+    return Object.values(montajes)
+        .filter(m => m.modelo === modelo)
+        .reduce((a, m) => a + Math.round((parseFloat(m.tiempoHoras) || 0) * 3600), 0);
+}
+
+// ------------------------------------------------------------
+// ARRANCAR / PAUSAR POR MONTAJE
+// ------------------------------------------------------------
+// Llamado cuando el operario empieza un montaje
+async function arrancarCronoMontaje(operacionId, montajeId) {
+    const c = await cargarCronoOperacion(operacionId);
+    const miNombre = window.operarioActual?.nombre || 'Operario';
+
+    // Leer estado actual desde Firestore (por si otro operario ya está ahí)
+    const data = await cargarDatosFirebase('cronos_montajes', true);
+    const key = operacionId + '_' + montajeId;
+    const saved = data[key] || {};
+    const operarios = saved.operariosActivos || [];
+
+    if (!operarios.includes(miNombre)) operarios.push(miNombre);
+
+    const nuevoEstado = {
+        operacionId,
+        montajeId,
+        operariosActivos: operarios,
+        ultimoTick: Date.now(),
+        tiempoConsumidoSeg: saved.tiempoConsumidoSeg || 0
+    };
+
+    await guardarFirebase('cronos_montajes', key, nuevoEstado);
+    if (window._fbCache['cronos_montajes']) delete window._fbCache['cronos_montajes'];
+
+    c.activo = true;
+    _iniciarTickCronoOperacion();
+    _actualizarBadgeCronoOperacion();
+}
+
+// Llamado cuando el operario pausa/termina un montaje
+async function pausarCronoMontaje(operacionId, montajeId) {
+    const miNombre = window.operarioActual?.nombre || 'Operario';
+    const key = operacionId + '_' + montajeId;
+
+    const data = await cargarDatosFirebase('cronos_montajes', true);
+    const saved = data[key];
+    if (!saved) return;
+
+    // Acumular el tramo actual antes de quitarme
+    const ahora = Date.now();
+    const segundosTick = saved.ultimoTick ? (ahora - saved.ultimoTick) / 1000 : 0;
+    const peso = (saved.operariosActivos || []).length;
+    const consumido = (saved.tiempoConsumidoSeg || 0) + segundosTick * peso;
+
+    // Quitarme de la lista
+    let operarios = (saved.operariosActivos || []).filter(n => n !== miNombre);
+
+    await guardarFirebase('cronos_montajes', key, {
+        ...saved,
+        operariosActivos: operarios,
+        tiempoConsumidoSeg: consumido,
+        ultimoTick: operarios.length > 0 ? ahora : null,
+        completado: operarios.length === 0
+    });
+    if (window._fbCache['cronos_montajes']) delete window._fbCache['cronos_montajes'];
+
+    // Si ya no hay nadie activo en NINGÚN montaje, parar el tick global
+    const activos = Object.values(window._cronoOperacion.montajesActivos || {});
+    if (activos.length === 0) {
+        // Puede que aún haya otros; verificar contra Firestore
+        const dataFresh = await cargarDatosFirebase('cronos_montajes', true);
+        const algunActivo = Object.values(dataFresh).some(m =>
+            m.operacionId === operacionId && (m.operariosActivos || []).length > 0
+        );
+        if (!algunActivo) {
+            _detenerTickCronoOperacion();
+            window._cronoOperacion.activo = false;
+        }
+    }
+}
+
+// ------------------------------------------------------------
+// TICK GLOBAL (cada 1s)
+// ------------------------------------------------------------
+function _iniciarTickCronoOperacion() {
+    _detenerTickCronoOperacion();
+    window._cronoOperacion.intervalo = setInterval(_tickGlobal, 1000);
+}
+
+function _detenerTickCronoOperacion() {
+    if (window._cronoOperacion.intervalo) {
+        clearInterval(window._cronoOperacion.intervalo);
+        window._cronoOperacion.intervalo = null;
+    }
+}
+
+let _ultimoGuardadoFirestore = 0;
+
+async function _tickGlobal() {
+    const c = window._cronoOperacion;
+    if (!c.operacionId) return;
+
+    // Leer cronos de montajes (con caché, sin forzar cada vez)
+    const data = await cargarDatosFirebase('cronos_montajes');
+    const ahora = Date.now();
+
+    // Calcular consumo total sumando todos los montajes de esta operación
+    let consumidoTotalSeg = 0;
+    let operariosUnicos = new Set();
+    let activosCount = 0;
+
+    for (const [key, m] of Object.entries(data)) {
+        if (m.operacionId !== c.operacionId) continue;
+
+        const operarios = m.operariosActivos || [];
+        const base = m.tiempoConsumidoSeg || 0;
+
+        // Si está activo AHORA, calcular el tramo en curso
+        let enCursoSeg = 0;
+        if (operarios.length > 0 && m.ultimoTick) {
+            const segsTick = (ahora - m.ultimoTick) / 1000;
+            enCursoSeg = segsTick * operarios.length;
+        }
+
+        consumidoTotalSeg += base + enCursoSeg;
+        operarios.forEach(n => operariosUnicos.add(n));
+        if (operarios.length > 0) activosCount++;
+    }
+
+    const restante = c.tiempoTotalSeg - consumidoTotalSeg;
+
+    // Actualizar badge
+    const badge = document.getElementById('cronoBadgeFlotante');
+    if (badge) {
+        if (operariosUnicos.size === 0) {
+            badge.style.display = 'none';
+        } else {
+            badge.style.display = 'flex';
+            badge.classList.toggle('negativo', restante < 0);
+
+            const tiempoEl = document.getElementById('cronoBadgeTiempo');
+            if (tiempoEl) {
+                if (restante >= 0) {
+                    tiempoEl.textContent = segundosAHorasDecimales(restante);
+                } else {
+                    tiempoEl.textContent = '-' + segundosAHorasDecimales(-restante);
+                }
+            }
+
+            const montajeEl = document.getElementById('cronoBadgeMontaje');
+            if (montajeEl) {
+                montajeEl.textContent = c.numeroOperacion ? `Op. ${c.numeroOperacion}` : 'Operación';
+            }
+
+            const operariosEl = document.getElementById('cronoBadgeOperarios');
+            if (operariosEl) {
+                operariosEl.textContent = `👥 ${operariosUnicos.size}`;
+            }
+        }
+    }
+
+    // Actualizar dashboard
+    const dashEl = document.getElementById('dashboard');
+    if (dashEl && dashEl.classList.contains('active')) {
+        _actualizarTiempoRestanteDashboardGlobal(restante, c.tiempoTotalSeg);
+    }
+
+    // Persistir en Firestore cada 15s (para no perder datos si cae conexión)
+    if (ahora - _ultimoGuardadoFirestore > 15000) {
+        _ultimoGuardadoFirestore = ahora;
+        _persistirCronosMontajes(data, ahora);
+    }
+}
+
+// Persistir el progreso de todos los montajes activos
+async function _persistirCronosMontajes(data, ahora) {
+    for (const [key, m] of Object.entries(data)) {
+        if (m.operacionId !== window._cronoOperacion.operacionId) continue;
+        const operarios = m.operariosActivos || [];
+        if (operarios.length === 0) continue;
+
+        const segsTick = m.ultimoTick ? (ahora - m.ultimoTick) / 1000 : 0;
+        const nuevoConsumido = (m.tiempoConsumidoSeg || 0) + segsTick * operarios.length;
+
+        await guardarFirebase('cronos_montajes', key, {
+            ...m,
+            tiempoConsumidoSeg: nuevoConsumido,
+            ultimoTick: ahora
+        });
+    }
+    if (window._fbCache['cronos_montajes']) delete window._fbCache['cronos_montajes'];
+}
+
+function _actualizarTiempoRestanteDashboardGlobal(restanteSeg, tiempoTotal) {
+    const tiempoHoyEl = document.getElementById('dashTiempoHoy');
+    if (!tiempoHoyEl) return;
+    tiempoHoyEl.textContent = segundosAHorasDecimales(Math.max(0, restanteSeg));
+
+    const pctRestante = tiempoTotal > 0 ? (Math.max(0, restanteSeg) / tiempoTotal) * 100 : 0;
+    if (pctRestante > 50) tiempoHoyEl.style.color = 'var(--success)';
+    else if (pctRestante > 25) tiempoHoyEl.style.color = 'var(--warning)';
+    else tiempoHoyEl.style.color = 'var(--danger)';
+
+    const statCard = tiempoHoyEl.closest('.stat-card');
+    if (statCard) {
+        statCard.classList.remove('success', 'warning', 'danger');
+        if (pctRestante > 50) statCard.classList.add('success');
+        else if (pctRestante > 25) statCard.classList.add('warning');
+        else statCard.classList.add('danger');
+    }
+}
+
 </script>
 </body>
 </html>
